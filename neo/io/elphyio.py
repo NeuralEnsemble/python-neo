@@ -3695,6 +3695,25 @@ class ElphyFile:
 # --------------------------------------------------------
 
 
+def _stack_analog_signal_magnitudes(analogsignalarrays):
+    """Stack analog signal channels without converting their per-channel units."""
+    return np.hstack([np.asarray(signal.magnitude) for signal in analogsignalarrays])
+
+
+def _serialize_analog_signal_channels(analogsignalarrays):
+    """Return Elphy channel metadata and RDATA bytes in each channel's native units."""
+    if not analogsignalarrays:
+        return 0, 0, b"", []
+
+    analogsignals = _stack_analog_signal_magnitudes(analogsignalarrays).T
+    nbchan, nbpt = analogsignals.shape
+    analog_data = np.array(analogsignals.flatten("F"), dtype=np.float32)
+    data_format = "<" + str(analogsignals.size) + "f"
+    serialized_analog_data = struct.pack(data_format, *analog_data)
+    aa_units = [signal.units for signal in analogsignalarrays for _ in range(signal.shape[1])]
+    return nbchan, nbpt, serialized_analog_data, aa_units
+
+
 class ElphyIO(BaseIO):
     """
     Class for reading from and writing to an Elphy file.
@@ -3831,17 +3850,13 @@ class ElphyIO(BaseIO):
         # print "\n\n--------------------------------------------\n"
         # print "write_block() - n_segments:",len(block.segments)
         for seg in block.segments:
-            analogsignals = 0  # init
-            nbchan = 0
-            nbpt = 0
-            chls = 0
+            analogsignal_arrays = []
             Dxu = 1e-8  # 0.0000001
             Rxu = 1e8  # 10000000.0
             X0uSpk = 0.0
             CyberTime = 0.0
-            aa_units = []
             NbEv = []
-            serialized_analog_data = ""
+            serialized_analog_data = b""
             serialized_spike_data = ""
             # AnalogSignals
             # Neo signalarrays are 2D numpy array where each row is an array of samples for a
@@ -3871,30 +3886,10 @@ class ElphyIO(BaseIO):
                     annotations, "analogsignal", asigar.annotations.items(), asigar.name, idx
                 )
                 # array structure
-                _, chls = asigar.shape
-                # units
-                for _ in range(chls):
-                    aa_units.append(asigar.units)
                 Dxu = asigar.sampling_period
                 Rxu = asigar.sampling_rate
-                if isinstance(analogsignals, np.ndarray):
-                    analogsignals = np.hstack((analogsignals, asigar))
-                else:
-                    analogsignals = asigar  # first time
-            # collect and reshape all analogsignals
-            if isinstance(analogsignals, np.ndarray):
-                # transpose matrix since in Neo channels are column-wise while in Elphy are
-                #  row-wise
-                analogsignals = analogsignals.T
-                # get dimensions
-                nbchan, nbpt = analogsignals.shape
-                # serialize AnalogSignal
-                analog_data_fmt = "<" + str(analogsignals.size) + "f"
-                # serialized flattened numpy channels in 'F'ortran style
-                analog_data_64 = analogsignals.flatten("F")
-                # elphy normally uses float32 values (for performance reasons)
-                analog_data = np.array(analog_data_64, dtype=np.float32)
-                serialized_analog_data += struct.pack(analog_data_fmt, *analog_data)
+                analogsignal_arrays.append(asigar)
+            nbchan, nbpt, serialized_analog_data, aa_units = _serialize_analog_signal_channels(analogsignal_arrays)
             # SpikeTrains
             # Neo spiketrains are stored as a one-dimensional array of times
             # [ 0.11, 1.23, 2.34, 3.45, 4.56, 5.67, 6.78, 7.89 ... ]

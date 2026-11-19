@@ -1161,6 +1161,67 @@ class TestMerge(unittest.TestCase):
         )
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
+    def test_merge_quantity_array_annotations_with_unit_conversion(self):
+        first = SpikeTrain(
+            [3, 1] * pq.ms,
+            t_stop=10 * pq.ms,
+            array_annotations={"quantity": [10, 20] * pq.s, "plain": [30, 10]},
+        )
+        second = SpikeTrain(
+            [2] * pq.ms,
+            t_stop=10 * pq.ms,
+            array_annotations={"quantity": [500] * pq.ms, "plain": [20]},
+        )
+        third = SpikeTrain(
+            [0.5] * pq.ms,
+            t_stop=10 * pq.ms,
+            array_annotations={"quantity": [250000] * pq.us, "plain": [5]},
+        )
+
+        result = first.merge(second, third)
+
+        self.assertEqual(result.array_annotations["quantity"].units, pq.s)
+        self.assertEqual(result.array_annotations["quantity"].shape, (4,))
+        np.testing.assert_array_equal(result.array_annotations["quantity"].magnitude, [0.25, 20, 0.5, 10])
+        np.testing.assert_array_equal(result.array_annotations["plain"], [5, 10, 20, 30])
+
+    def test_merge_uncertain_quantity_array_annotations_with_unit_conversion(self):
+        first = SpikeTrain(
+            [3, 1] * pq.ms,
+            t_stop=10 * pq.ms,
+            array_annotations={
+                "uncertain": pq.UncertainQuantity([10, 20], units=pq.s, uncertainty=[0.1, 0.2]),
+            },
+        )
+        second = SpikeTrain(
+            [2] * pq.ms,
+            t_stop=10 * pq.ms,
+            array_annotations={"uncertain": pq.UncertainQuantity([500], units=pq.ms, uncertainty=[25])},
+        )
+        third = SpikeTrain(
+            [0.5] * pq.ms,
+            t_stop=10 * pq.ms,
+            array_annotations={"uncertain": pq.UncertainQuantity([250000], units=pq.us, uncertainty=[12500])},
+        )
+
+        result = first.merge(second, third)
+        merged = result.array_annotations["uncertain"]
+
+        self.assertIsInstance(merged, pq.UncertainQuantity)
+        self.assertEqual(merged.units, pq.s)
+        self.assertEqual(merged.shape, (4,))
+        np.testing.assert_array_equal(merged.magnitude, [0.25, 20, 0.5, 10])
+        self.assertEqual(merged.uncertainty.units, pq.s)
+        np.testing.assert_allclose(merged.uncertainty.magnitude, [0.0125, 0.2, 0.025, 0.1])
+
+        incompatible = SpikeTrain(
+            [4] * pq.ms,
+            t_stop=10 * pq.ms,
+            array_annotations={"uncertain": pq.UncertainQuantity([1], units=pq.m, uncertainty=[0.1])},
+        )
+        with self.assertRaises(ValueError):
+            first.merge(incompatible)
+
     def test_merge_with_waveforms(self):
         # Array annotations merge warning was already tested, can be ignored now
         with warnings.catch_warnings(record=True) as w:
@@ -1200,9 +1261,9 @@ class TestMerge(unittest.TestCase):
 
         assert_arrays_equal(
             result.waveforms,
-            np.vstack([st.waveforms.rescale(self.train1.waveforms.units) for st in (self.train1, train3, train4)])[
-                sorting
-            ]
+            np.vstack(
+                [st.waveforms.rescale(self.train1.waveforms.units).magnitude for st in (self.train1, train3, train4)]
+            )[sorting]
             * self.train1.waveforms.units,
         )
 

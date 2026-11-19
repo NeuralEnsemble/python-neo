@@ -1,9 +1,10 @@
 import copy
-
-import numpy as np
 import unittest
 
-from neo.core.dataobject import DataObject, _normalize_array_annotations, ArrayDict
+import numpy as np
+import quantities as pq
+
+from neo.core.dataobject import ArrayDict, DataObject, _normalize_array_annotations
 
 
 class Test_DataObject(unittest.TestCase):
@@ -12,6 +13,45 @@ class Test_DataObject(unittest.TestCase):
 
 
 class Test_array_annotations(unittest.TestCase):
+    def test_merge_quantity_array_annotations(self):
+        first = DataObject([1, 2])
+        first.array_annotate(quantity=[1, 2] * pq.s, plain=np.array([10, 20]))
+        second = DataObject([3, 4])
+        second.array_annotate(quantity=[500, 250] * pq.ms, plain=np.array([30, 40]))
+
+        merged = first._merge_array_annotations(second)
+
+        self.assertEqual(merged["quantity"].units, pq.s)
+        np.testing.assert_array_equal(merged["quantity"].magnitude, [1, 2, 0.5, 0.25])
+        self.assertEqual(merged["quantity"].shape, (4,))
+        np.testing.assert_array_equal(merged["plain"], [10, 20, 30, 40])
+
+        second.array_annotations["quantity"] = [1, 2] * pq.m
+        with self.assertRaisesRegex(ValueError, "Could not merge array annotations"):
+            first._merge_array_annotations(second)
+
+    def test_merge_uncertain_quantity_array_annotations(self):
+        first = DataObject([1, 2])
+        first.array_annotate(quantity=pq.UncertainQuantity([1, 2], units=pq.s, uncertainty=[0.1, 0.2]))
+        second = DataObject([3])
+        second.array_annotate(quantity=pq.UncertainQuantity([500], units=pq.ms, uncertainty=[25]))
+
+        merged = first._merge_array_annotations(second)["quantity"]
+
+        self.assertIsInstance(merged, pq.UncertainQuantity)
+        self.assertEqual(merged.units, pq.s)
+        np.testing.assert_array_equal(merged.magnitude, [1, 2, 0.5])
+        self.assertEqual(merged.uncertainty.units, pq.s)
+        np.testing.assert_array_equal(merged.uncertainty.magnitude, [0.1, 0.2, 0.025])
+
+        second.array_annotations["quantity"] = [500] * pq.ms
+        with self.assertRaisesRegex(ValueError, "Could not merge array annotations"):
+            first._merge_array_annotations(second)
+
+        second.array_annotations["quantity"] = pq.UncertainQuantity([1], units=pq.m, uncertainty=[0.1])
+        with self.assertRaisesRegex(ValueError, "Could not merge array annotations"):
+            first._merge_array_annotations(second)
+
     def test_check_arr_ann(self):
         # DataObject instance that handles checking
         datobj = DataObject([1, 2])  # Inherits from Quantity, so some data is required

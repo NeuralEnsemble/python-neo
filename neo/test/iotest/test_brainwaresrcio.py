@@ -324,6 +324,23 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
                 raise
 
 
+class BrainwareSrcIOHelperTest(unittest.TestCase):
+    def test_raw_spike_records_are_milliseconds_before_quantity_construction(self):
+        reader = BrainwareSrcIO()
+        reader._default_spiketrain = reader._init_default_spiketrain.copy()
+        raw_spikes = [
+            (np.array([1.0, 3.0]), np.zeros((2, 1, 2), dtype=np.int8), np.array([2, 3], dtype=np.uint8)),
+            (np.array([5.0]), np.zeros((1, 1, 2), dtype=np.int8), np.array([4], dtype=np.uint8)),
+        ]
+
+        train = reader._combine_spiketrains(raw_spikes)
+
+        self.assertEqual(train.units, pq.ms)
+        np.testing.assert_array_equal(train.magnitude, [1, 3, 5])
+        self.assertEqual(train.annotations["trig2"].units, pq.ms)
+        np.testing.assert_array_equal(train.annotations["trig2"].magnitude, [2, 3, 4])
+
+
 if __name__ == "__main__":
     logger = logging.getLogger(BrainwareSrcIO.__module__ + "." + BrainwareSrcIO.__name__)
     logger.setLevel(100)
