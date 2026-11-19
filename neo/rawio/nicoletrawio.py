@@ -942,7 +942,7 @@ class NicoletRawIO(BaseRawIO):
         cum_segment_duration = [0] + list(
             np.cumsum([(segment["duration"].total_seconds()) for segment in self.segments_properties])
         )
-        data = np.empty([(i_stop - i_start) * len(channel_indexes)])
+        data = np.empty([(i_stop - i_start) * len(channel_indexes)], dtype = self.raw_signal.dtype)
         section_slices = []
         for channel_index in channel_indexes:
             current_samplingrate = self.segments_properties[seg_index]["sampling_rates"][channel_index]
