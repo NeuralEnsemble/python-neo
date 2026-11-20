@@ -105,8 +105,8 @@ class EDFRawIO(BaseRawIO):
             dtype = "int16"  # assume general int16 based on edf documentation
             units = sig_dict["dimension"]
             physical_range = sig_dict["physical_max"] - sig_dict["physical_min"]
-            # number of digital steps resolved (+1 to account for '0')
-            digital_range = sig_dict["digital_max"] - sig_dict["digital_min"] + 1
+            # The digital endpoints correspond to the physical endpoints.
+            digital_range = sig_dict["digital_max"] - sig_dict["digital_min"]
             gain = physical_range / digital_range
             offset = -1 * sig_dict["digital_min"] * gain + sig_dict["physical_min"]
 

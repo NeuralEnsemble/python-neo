@@ -24,6 +24,17 @@ from .baserawio import (
 )
 from neo.core import NeoReadWriteError
 
+# A decimal number followed by an optional unit
+# Example: "0.01617", "-1.5e-3", "0.003muV", "256.0Hz"
+# Format:  {number}{unit}
+# Regex tokens:
+#   [-+]?           → optional sign
+#   \d+\.?\d*       → digits with an optional decimal part, e.g. "43", "5.", "0.01617"
+#   \.\d+           → or a number that starts at the decimal point, e.g. ".5"
+#   [eE][-+]?\d+    → optional exponent, e.g. "e-3"
+#   \w*             → the unit, e.g. "muV", possibly empty
+_number_pattern = r"(?P<number>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)(?P<unit>\w*)"
+
 
 class BCI2000RawIO(BaseRawIO):
     """
@@ -74,16 +85,16 @@ class BCI2000RawIO(BaseRawIO):
             gain = param_defs["SourceChGain"]["value"][chan_ix]
 
             if isinstance(gain, str):
-                r = re.findall(r"(\d+)(\D+)", gain)
                 # some files have strange units attached to gain
                 # in that case it is ignored
-                if len(r) == 1:
-                    gain = r[0][0]
-                gain = float(gain)
+                gain = float(re.match(_number_pattern, gain).group("number"))
 
             offset = param_defs["SourceChOffset"]["value"][chan_ix]
             if isinstance(offset, str):
-                offset = float(offset)
+                offset = float(re.match(_number_pattern, offset).group("number"))
+            # BCI2000 defines uV = (raw - SourceChOffset) * SourceChGain
+            # while neo computes raw * gain + offset
+            offset = -offset * gain
 
             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
         self.header["signal_channels"] = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -280,7 +291,8 @@ def parse_bci2000_header(filename):
         if param_val.lower().startswith("0x"):
             param_val = int(param_val, 16)
         elif data_type in ["int", "float"]:
-            matches = re.match(r"(-*\d+)(\w*)", param_val)
+            pattern = r"(-*\d+)(\w*)" if data_type == "int" else _number_pattern
+            matches = re.match(pattern, param_val)
             if matches is not None:  # Can be None for % in def, min, max vals
                 param_val, unit_str = matches.group(1), matches.group(2)
                 param_val = int(param_val) if data_type == "int" else float(param_val)
@@ -325,7 +337,9 @@ def parse_bci2000_header(filename):
         if temp != "[ State Vector Definition ]":
             raise NeoReadWriteError(f"State definitions not found in header {filename}")
         state_defs = []
-        state_def_dtype = [("name", "a64"), ("length", int), ("startVal", int), ("bytePos", int), ("bitPos", int)]
+        # "S64" because NumPy 2.0 deprecated the "a64" alias (https://github.com/numpy/numpy/pull/24854)
+        # and NumPy 2.5 removed it, see https://github.com/NeuralEnsemble/python-neo/pull/1932
+        state_def_dtype = [("name", "S64"), ("length", int), ("startVal", int), ("bytePos", int), ("bitPos", int)]
         while True:
             temp = fid.readline().decode("utf8").strip()
             if len(temp) == 0 or temp[0] == "[":

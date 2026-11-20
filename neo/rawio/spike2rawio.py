@@ -83,6 +83,9 @@ class Spike2RawIO(BaseRawIO):
             for chan_id in range(info["channels"]):
                 fid.seek(512 + 140 * chan_id)
                 chan_info = read_as_dict(fid, channelHeaderDesciption1)
+                if info["system_id"] >= 9:
+                    # version 9 keeps the high word of the block count in blocks_msw
+                    chan_info["blocks"] = int(chan_info["blocks"]) + 65536 * int(chan_info["blocks_msw"])
 
                 if chan_info["kind"] in [1, 6]:
                     dt = [
@@ -716,10 +719,10 @@ channelHeaderDesciption1 = [
     ("next_del_block", "i4"),  # i8
     ("firstblock", "i4"),  # i8
     ("lastblock", "i4"),  # i8
-    ("blocks", "i2"),
+    ("blocks", "u2"),  # unsigned: a channel can have more than 32767 blocks
     ("n_extra", "i2"),
     ("pre_trig", "i2"),
-    ("free0", "i2"),
+    ("blocks_msw", "i2"),  # high word of the block count in version 9, see blocks
     ("py_sz", "i2"),
     ("max_data", "i2"),
     ("comment", "S72"),
