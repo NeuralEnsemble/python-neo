@@ -857,7 +857,6 @@ class NicoletRawIO(BaseRawIO):
         Read a chunk of signal from the memmap
         """
         segment_signal_channels = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index)
-
         if block_index >= self.header["nb_block"]:
             raise IndexError(f"Block Index out of range. There are {self.header['nb_block']} blocks in the file")
 
@@ -867,25 +866,31 @@ class NicoletRawIO(BaseRawIO):
             )
 
         if channel_indexes is None:
-            channel_indexes = [
-                i for i, channel in enumerate(segment_signal_channels) if channel["stream_id"] == str(stream_index)
-            ]
+            channels = np.array([
+                    channel['id'] for channel in segment_signal_channels if channel["stream_id"] == str(stream_index)
+                ], dtype = np.uint16)
         elif isinstance(channel_indexes, slice):
             if channel_indexes == slice(None):
-                channel_indexes = [
-                    i for i, channel in enumerate(segment_signal_channels) if channel["stream_id"] == str(stream_index)
-                ]
-            channel_indexes = np.arange(self.header["signal_channels"].shape[0], dtype="int")[channel_indexes]
+                channels = np.array([
+                    channel['id'] for channel in segment_signal_channels if channel["stream_id"] == str(stream_index)
+                ], dtype = np.uint16)
+            else:
+                channels = np.array([
+                                channel['id'] for channel in segment_signal_channels if channel["stream_id"] == str(stream_index)
+                            ], dtype = np.uint16)[channel_indexes]
         else:
             channel_indexes = np.asarray(channel_indexes)
             if any(channel_indexes < 0):
                 raise IndexError("Channel Indices cannot be negative")
-            channels_exist = np.isin(channel_indexes, range(segment_signal_channels.shape[0]))
+            stream_channel_indexes = np.array([
+                            int(channel['id']) for channel in segment_signal_channels if channel["stream_id"] == str(stream_index)
+                        ], dtype = np.uint16)
+            channels_exist = np.isin(channel_indexes, range(len(stream_channel_indexes)))
             if not np.all(channels_exist):
                 raise IndexError(
-                    f"Channels {channel_indexes[~channels_exist]} from header do not exist in segment {seg_index}, stream {stream_index}. "
+                    f"Channels {channel_indexes[~channels_exist]} in stream {stream_index} do not exist in segment {seg_index}. "
                 )
-
+            channels = stream_channel_indexes[channel_indexes]
         if i_start is None:
             i_start = 0
 
@@ -898,9 +903,9 @@ class NicoletRawIO(BaseRawIO):
         cum_segment_duration = [0] + list(
             np.cumsum([(segment["duration"].total_seconds()) for segment in self.segments_properties])
         )
-        data = np.empty([(i_stop - i_start) * len(channel_indexes)], dtype = self.raw_signal.dtype)
+        data = np.empty([(i_stop - i_start) * len(channels)], dtype = self.raw_signal.dtype)
         section_slices = []
-        for channel_index in channel_indexes:
+        for channel_index in channels:
             current_samplingrate = self.segments_properties[seg_index]["sampling_rates"][channel_index]
 
             [tag_idx] = [tag["index"] for tag in self.tags if tag["tag"] == str(channel_index)]
