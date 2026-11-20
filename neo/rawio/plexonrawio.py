@@ -236,7 +236,8 @@ class PlexonRawIO(BaseRawIO):
                             if index == 0:
                                 data_block["cumsum"][index] = 0
                             else:
-                                data_block["cumsum"][index] = data_block["cumsum"][index - 1] + sample_count
+                                previous_sample_count = data_block["size"][index - 1] // 2
+                                data_block["cumsum"][index] = data_block["cumsum"][index - 1] + previous_sample_count
 
                 self._data_blocks[bl_type][chan_id] = data_block
 
