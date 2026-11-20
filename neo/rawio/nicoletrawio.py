@@ -177,11 +177,13 @@ class NicoletRawIO(BaseRawIO):
         Parses the default header structure and generates some more annotions
         """
         self._extract_header_information()
+        self.segments_properties = self._get_segment_properties()
+
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [int(self._get_index_instances("SegmentStream")[0]["section_l"] / 152)]
         self.header["signal_buffers"] = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
-        self.header["signal_channels"] = self._create_signal_channels(_signal_channel_dtype)
+        self.header["signal_channels"] = self._create_signal_channels_from_all_segments()
         self.header["signal_streams"] = np.array(
             [(f"Signals {signal_id}", signal_id, "0") for signal_id in self.signal_streams.values()],
             dtype=_signal_stream_dtype,
@@ -190,8 +192,6 @@ class NicoletRawIO(BaseRawIO):
         self.header["event_channels"] = np.array(
             [("Event", "0", "event"), ("Epoch", "1", "epoch")], dtype=_event_channel_dtype
         )
-
-        self.segments_properties = self._get_segment_properties()
         self.events = self._get_events()
         self.montages, self.display = self._get_montage()
         self.raw_signal = self._get_raw_signal()
@@ -497,16 +497,17 @@ class NicoletRawIO(BaseRawIO):
         with open(self.filename, "rb") as fid:
             fid.seek(segment_instance["offset"], 0)
             for seg_index in range(n_segments):
-                segment_signal_channels = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index)
                 segment_info = {}
                 segment_info["date_ole"] = self.read_as_list(fid, [("date", "float64")])
                 date_str = self._convert_ole_to_datetime(segment_info["date_ole"])
                 fid.seek(8, 1)
                 segment_info["duration"] = self.read_as_list(fid, [("duration", "float64")])
                 fid.seek(128, 1)
-                segment_info["ch_names"] = [channel[0] for channel in segment_signal_channels]
-                segment_info["sampling_rates"] = [channel[2] for channel in segment_signal_channels]
-                segment_info["scale"] = [channel[5] for channel in segment_signal_channels]
+                segment_signal_channels = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index)
+                segment_info["signal_channels"] = segment_signal_channels
+                segment_info["ch_names"] = {channel['id'] : channel['name'] for channel in segment_signal_channels}
+                segment_info["sampling_rates"] = {channel['id'] : channel['sampling_rate'] for channel in segment_signal_channels}
+                segment_info["scale"] = {channel['id'] : channel['gain'] for channel in segment_signal_channels}
                 segment_info["date"] = date_str
                 segment_info["start_date"] = date_str.date()
                 segment_info["start_time"] = date_str.time()
@@ -717,6 +718,26 @@ class NicoletRawIO(BaseRawIO):
         self.channel_structure, self.channel_properties = self._get_channel_info()
         self.ts_packets, self.ts_packets_properties = self._get_ts_properties()
 
+    def _create_signal_channels_from_all_segments(self):
+        per_segment_channels = {}
+        for segment_properties in self.segments_properties:
+            for channel in segment_properties['signal_channels']:
+                if channel['name'] not in per_segment_channels.keys():
+                    per_segment_channels[channel['name']] = [channel]
+                else:
+                    per_segment_channels[channel['name']].append(channel)
+
+        file_channels = []
+        for channel_name, channel_info in per_segment_channels.items():
+            if len(np.unique([info for info in channel_info])) > 1:
+                warnings.warn(f'Channel {channel_name} has disparate channel metadata between segments, skipping {channel_name}')
+            elif len(channel_info) < self.header["nb_segment"][0]:
+                warnings.warn(f'Channel {channel_name} is not present in all segments, skipping {channel_name}')
+            else:
+                file_channels.append(channel_info[0])
+
+        return np.array(file_channels)
+
     def _create_signal_channels(self, dtype, seg_index=0):
         """
         Create information for signal channels based on channel properties, timestream and signal_properties
@@ -854,7 +875,6 @@ class NicoletRawIO(BaseRawIO):
         """
         Read a chunk of signal from the memmap
         """
-        segment_signal_channels = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index)
         if block_index >= self.header["nb_block"]:
             raise IndexError(f"Block Index out of range. There are {self.header['nb_block']} blocks in the file")
 
@@ -865,23 +885,23 @@ class NicoletRawIO(BaseRawIO):
 
         if channel_indexes is None:
             channels = np.array([
-                    channel['id'] for channel in segment_signal_channels if channel["stream_id"] == str(stream_index)
+                    channel['id'] for channel in self.header['signal_channels'] if channel["stream_id"] == str(stream_index)
                 ], dtype = np.uint16)
         elif isinstance(channel_indexes, slice):
             if channel_indexes == slice(None):
                 channels = np.array([
-                    channel['id'] for channel in segment_signal_channels if channel["stream_id"] == str(stream_index)
+                    channel['id'] for channel in self.header['signal_channels'] if channel["stream_id"] == str(stream_index)
                 ], dtype = np.uint16)
             else:
                 channels = np.array([
-                                channel['id'] for channel in segment_signal_channels if channel["stream_id"] == str(stream_index)
+                                channel['id'] for channel in self.header['signal_channels'] if channel["stream_id"] == str(stream_index)
                             ], dtype = np.uint16)[channel_indexes]
         else:
             channel_indexes = np.asarray(channel_indexes)
             if any(channel_indexes < 0):
                 raise IndexError("Channel Indices cannot be negative")
             stream_channel_indexes = np.array([
-                            int(channel['id']) for channel in segment_signal_channels if channel["stream_id"] == str(stream_index)
+                            int(channel['id']) for channel in self.header['signal_channels'] if channel["stream_id"] == str(stream_index)
                         ], dtype = np.uint16)
             channels_exist = np.isin(channel_indexes, range(len(stream_channel_indexes)))
             if not np.all(channels_exist):
@@ -904,7 +924,7 @@ class NicoletRawIO(BaseRawIO):
         data = np.empty([(i_stop - i_start) * len(channels)], dtype = self.raw_signal.dtype)
         section_slices = []
         for channel_index in channels:
-            current_samplingrate = self.segments_properties[seg_index]["sampling_rates"][channel_index]
+            current_samplingrate = self.segments_properties[seg_index]["sampling_rates"][str(channel_index)]
 
             [tag_idx] = [tag["index"] for tag in self.tags if tag["tag"] == str(channel_index)]
             all_sections = [j for j, idx_id in enumerate(self.all_section_ids) if idx_id == tag_idx]
