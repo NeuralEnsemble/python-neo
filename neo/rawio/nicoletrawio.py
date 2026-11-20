@@ -685,11 +685,11 @@ class NicoletRawIO(BaseRawIO):
         """
         Get the number of samples for a given signal stream in a given segment
         """
-        duration = self.segments_properties[seg_index]["duration"].total_seconds()
+        duration_s = self.segments_properties[seg_index]["duration"].total_seconds()
         return [
-            int(sampling_rate * duration)
-            for sampling_rate in self.segments_properties[seg_index]["sampling_rates"]
-            if self.signal_streams[sampling_rate] == stream_index
+            int(channel['sampling_rate'] * duration_s)
+            for channel in self.header["signal_channels"]
+            if channel["stream_id"] == str(stream_index)
         ]
 
     def _get_raw_signal(self):
@@ -759,10 +759,9 @@ class NicoletRawIO(BaseRawIO):
                     )
                     continue
 
-                if channel["sampling_rate"] not in signal_streams.keys():
-                    signal_streams[channel["sampling_rate"]] = stream_id
+                if (channel["sampling_rate"], signal["transducer"]) not in signal_streams.keys():
+                    signal_streams[(channel["sampling_rate"], signal["transducer"])] = stream_id
                     stream_id += 1
-                    channel["sampling_rate"]
 
                 signal_channels.append(
                     (
@@ -773,7 +772,7 @@ class NicoletRawIO(BaseRawIO):
                         signal["transducer"],
                         timestream["resolution"],
                         timestream["eeg_offset"],
-                        signal_streams[channel["sampling_rate"]],
+                        signal_streams[(channel["sampling_rate"], signal["transducer"])],
                         "0",
                     )
                 )
@@ -794,10 +793,9 @@ class NicoletRawIO(BaseRawIO):
                         f"No signal found for channel {channel['active_sensor']} in segment {seg_index}. Skipping channel."
                     )
                     continue
-                if channel["sampling_rate"] not in signal_streams.keys():
-                    signal_streams[channel["sampling_rate"]] = stream_id
+                if (channel["sampling_rate"], signal["transducer"]) not in signal_streams.keys():
+                    signal_streams[(channel["sampling_rate"], signal["transducer"])] = stream_id
                     stream_id += 1
-                    channel["sampling_rate"]
 
                 signal_channels.append(
                     (
@@ -808,7 +806,7 @@ class NicoletRawIO(BaseRawIO):
                         signal["transducer"],
                         channel["resolution"],
                         channel["eeg_offset"],
-                        signal_streams[channel["sampling_rate"]],
+                        signal_streams[(channel["sampling_rate"], signal["transducer"])],
                         "0",
                     )
                 )
