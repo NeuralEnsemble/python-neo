@@ -717,13 +717,6 @@ class NicoletRawIO(BaseRawIO):
         self.channel_structure, self.channel_properties = self._get_channel_info()
         self.ts_packets, self.ts_packets_properties = self._get_ts_properties()
 
-    def set_signal_channels(self, seg_index):
-        """
-        Helper function to set the header of the reader to the number of channels in the desired segment
-        Use this when the number of channels differs between segments.
-        """
-        self.header["signal_channels"] = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index)
-
     def _create_signal_channels(self, dtype, seg_index=0):
         """
         Create information for signal channels based on channel properties, timestream and signal_properties
@@ -891,7 +884,6 @@ class NicoletRawIO(BaseRawIO):
             if not np.all(channels_exist):
                 raise IndexError(
                     f"Channels {channel_indexes[~channels_exist]} from header do not exist in segment {seg_index}, stream {stream_index}. "
-                    "Use the set_signal_channels method before calling read_segments to update the header with the correct channels."
                 )
 
         if i_start is None:
