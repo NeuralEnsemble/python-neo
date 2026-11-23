@@ -3,6 +3,8 @@ This module implements a reader for .e files produced by the NicoletOne EEG-Syst
 
 This reader is based on a MATLAB implementation of a .e file reader (https://github.com/ieeg-portal/Nicolet-Reader).
 The original authors of the MATLAB implementation are Joost Wagenaar, Cristian Donos, Jan Brogger and Callum Stewart.
+According to the original authors, their implementation is not based on official file specifications,
+but on examining the file in a hex-editor, and intricate knowledge of the recording system.
 
 All timestamps in the file are recorded in local time. To account for this, the module returns timezone-naive datetime objects.
 
@@ -28,6 +30,8 @@ from neo.rawio.baserawio import (
 class NicoletRawIO(BaseRawIO):
     """
     The Class to read in .e files produced by the NicoletOne EEG-System.
+    The code is reverse-enginnered from a MATLAB-based implementation.
+    The file format is closed, meaning there are no public official file specifications.
 
     Parameters
     ----------
