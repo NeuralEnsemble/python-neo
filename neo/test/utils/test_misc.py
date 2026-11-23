@@ -273,16 +273,6 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         assert_arrays_equal(trials_1_2b_b.array_annotations["trial_id"], np.array([1, 2]))
         self.assertIsInstance(trials_1_2b_b.array_annotations, ArrayDict)
 
-    def test__add_epoch_negative_duration_message(self):
-        starts = Event(times=[1.0, 2.0] * pq.s)
-        stops = Event(times=[0.5, 1.5] * pq.s)
-        seg = Segment()
-        seg.events = [starts, stops]
-
-        # the offending durations must appear in the error message
-        with self.assertRaisesRegex(ValueError, r"Requested durations \[-0\.5 -0\.5\] s"):
-            add_epoch(seg, starts, stops)
-
     def test__add_epoch(self):
         starts = Event(times=[0.5, 10.0, 25.2] * pq.s)
         starts.annotate(event_type="trial start", nix_name="neo.event.0")

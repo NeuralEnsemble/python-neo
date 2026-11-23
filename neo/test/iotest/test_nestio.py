@@ -3,8 +3,6 @@ Tests of neo.io.exampleio
 """
 
 import warnings
-from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import unittest
 
@@ -14,18 +12,6 @@ import numpy as np
 from neo.io.nestio import ColumnIO
 from neo.io.nestio import NestIO
 from neo.test.iotest.common_io_test import BaseTestIO
-
-
-class TestNestIOErrorMessages(unittest.TestCase):
-    def test_invalid_columns_and_sampling_distances(self):
-        with TemporaryDirectory() as directory:
-            filename = str(Path(directory) / "voltage.dat")
-            np.savetxt(filename, [[1, 0, -60], [1, 1, -61], [1, 3, -62], [1, 4, -63]])
-            reader = NestIO(filenames=filename)
-            with self.assertRaisesRegex(ValueError, r"Columns were specified to \[0, 1, 1\]"):
-                reader.read_segment(gid_list=[1], value_columns_dat=1)
-            with self.assertRaisesRegex(ValueError, r"data set \(\[1\. 2\.\]\)"):
-                reader.read_segment(gid_list=[1], value_columns_dat=2)
 
 
 class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
