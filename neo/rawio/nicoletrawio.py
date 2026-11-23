@@ -4,6 +4,8 @@ This module implements a reader for .e files produced by the NicoletOne EEG-Syst
 This reader is based on a MATLAB implementation of a .e file reader (https://github.com/ieeg-portal/Nicolet-Reader).
 The original authors of the MATLAB implementation are Joost Wagenaar, Cristian Donos, Jan Brogger and Callum Stewart.
 
+All timestamps in the file are recorded in local time. To account for this, the module returns timezone-naive datetime objects.
+
 Author: Murezi Capaul <murezi.capaul@kliniklengg.ch>
 """
 
@@ -615,10 +617,10 @@ class NicoletRawIO(BaseRawIO):
         return [events, epochs]
 
     def _convert_ole_to_datetime(
-        self, timestamp_ole, date_fraction=0, ole_epoch=datetime(1899, 12, 30, 0, 0, 0, tzinfo=timezone.utc)
+        self, timestamp_ole, date_fraction=0, ole_epoch=datetime(1899, 12, 30, 0, 0, 0)
     ):
         """
-        Date is saved as OLE with the timezone offset integrated in the file. Transform this to datetime object and add the date_fraction if provided
+        Date is saved as OLE in local time. Transform this to timezone-naive datetime object and return it.
         If the timestamp is before the OLE Epoch plus 1 day (1899-12-31 00:00:00) or after 2100 due to a corrupted event, return the datetime object for 1899-12-30 00:00:00
         """
 
