@@ -509,7 +509,7 @@ class NicoletRawIO(BaseRawIO):
                 fid.seek(8, 1)
                 segment_info["duration"] = self.read_as_list(fid, [("duration", "float64")])
                 fid.seek(128, 1)
-                segment_signal_channels = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index)
+                segment_signal_channels = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index, seg_start = date_str)
                 segment_info["signal_channels"] = segment_signal_channels
                 segment_info["ch_names"] = {channel['id'] : channel['name'] for channel in segment_signal_channels}
                 segment_info["sampling_rates"] = {channel['id'] : channel['sampling_rate'] for channel in segment_signal_channels}
@@ -744,15 +744,11 @@ class NicoletRawIO(BaseRawIO):
 
         return np.array(file_channels)
 
-    def _create_signal_channels(self, dtype, seg_index=0):
+    def _create_signal_channels(self, dtype, seg_index, seg_start):
         """
         Create information for signal channels based on channel properties, timestream and signal_properties
         """
-        if seg_index >= len(self.ts_packets_properties):
-            warnings.warn(
-                f"No timestream found for segment {seg_index}. Using timestream of segment {len(self.ts_packets_properties) - 1}."
-            )
-            seg_index = len(self.ts_packets_properties) - 1
+        ts_index = max([i for i, ts_packet in enumerate(self.ts_packets) if ts_packet['date'] <= seg_start])
 
         signal_channels = []
         signal_streams = {}
@@ -768,7 +764,7 @@ class NicoletRawIO(BaseRawIO):
                 timestream = next(
                     (
                         item
-                        for item in self.ts_packets_properties[seg_index]
+                        for item in self.ts_packets_properties[ts_index]
                         if item["active_sensor"] == channel["sensor"]
                     ),
                     None,
@@ -805,12 +801,12 @@ class NicoletRawIO(BaseRawIO):
                 )
                 channel_id += 1
         elif self.ts_packets_properties[
-            seg_index
+            ts_index
         ]:  # When channel properties are missing, use timestream of the current segment
             warnings.warn(
                 f"Channel Properties not found. Extrapolating Signal Channels from Timestream of segment {seg_index}. Please check output to confirm correct channels."
             )
-            for channel in self.ts_packets_properties[seg_index]:
+            for channel in self.ts_packets_properties[ts_index]:
                 signal = next(
                     (item for item in self.signal_properties if item["name"] == channel["active_sensor"]), None
                 )
