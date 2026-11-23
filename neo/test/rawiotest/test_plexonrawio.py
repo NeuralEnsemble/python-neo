@@ -21,6 +21,25 @@ class TestPlexonRawIO(
         "plexon/plx/timestamp_clock/one_megahertz_forty_bit_timestamps/sorted_spikes_and_strobed_events.plx",
     ]
 
+    def test_unequal_signal_block_sizes(self):
+        """Read across unequal blocks in a real recording."""
+        reader = PlexonRawIO(filename=self.get_local_path("plexon/File_plexon_3.plx"), progress_bar=False)
+        reader.parse_header()
+        blocks = reader._data_blocks[5][0]
+        sample_counts = blocks["size"] // 2
+        np.testing.assert_array_equal(np.unique(sample_counts), [86, 120])
+        starts = np.r_[0, np.cumsum(sample_counts[:-1])]
+        np.testing.assert_array_equal(blocks["cumsum"], starts)
+
+        previous, last = blocks[-2:]
+        previous_samples = np.frombuffer(
+            reader._memmap, dtype="int16", count=previous["size"] // 2, offset=previous["pos"]
+        )
+        last_samples = np.frombuffer(reader._memmap, dtype="int16", count=last["size"] // 2, offset=last["pos"])
+        expected = np.r_[previous_samples[-10:], last_samples[:10]]
+        chunk = reader.get_analogsignal_chunk(i_start=starts[-1] - 10, i_stop=starts[-1] + 10)
+        np.testing.assert_array_equal(chunk[:, 0], expected)
+
     def test_timestamps_with_lower_word_above_two_to_the_31(self):
         """The lower 32 bits of the 40-bit block timestamp must be read unsigned.
 
