@@ -329,7 +329,7 @@ def add_epoch(segment, event1, event2=None, pre=0 * pq.s, post=0 * pq.s, attach_
     durations = event2.times + post - times
 
     if any(durations < 0):
-        raise ValueError(f"Can not create epoch with negative duration. " "Requested durations {durations}.")
+        raise ValueError(f"Can not create epoch with negative duration. Requested durations {durations}.")
     elif any(durations == 0):
         raise ValueError("Can not create epoch with zero duration.")
 
