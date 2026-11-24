@@ -10,7 +10,6 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 from neo.test.rawiotest.test_plexon2rawio import TestPlexon2RawIO
 
-
 try:
     from neo.rawio.plexon2rawio.pypl2 import pypl2lib
 

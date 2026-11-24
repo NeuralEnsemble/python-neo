@@ -146,10 +146,10 @@ Read chunks of signal data and scale them
     In [14]: sampling_rate, t_start, units
     Out[14]: (1000.0, 0.0, '')
 
-There are 3 ways to select a subset of channels: by index (0 based), by id or by name.
-By index is unambiguous 0 to n-1 (inclusive), whereas for some IOs channel_names
-(and sometimes channel_ids) are not guaranteed to be unique.
-In such cases, using names or ids may raise an error.
+There are 3 ways to select a subset of channels: by index (0-based), by id (IO-specific numbering scheme) or by name (IO-specific naming scheme).
+By index is unambiguous 0 to n-1 (inclusive), ids are unambiguous (though each IO may use a different scheme), by channel name is often unique, but this is not guaranteed.
+In general it is safest to use ids as they are guaranteed to be unique and are specific to the IO. Indexes are positional and only stable within a given version of Neo; 
+a reader update (for example adding digital channels) can change which channel an index points to. If your code needs to work across Neo versions, select by id.
 
 A selected subset of channels which is passed to :func:`get_analog_signal_chunk()`, :func:`get_analog_signal_size()`,
 or :func:`get_analog_signal_t_start()` has the additional restriction that all such channels must have

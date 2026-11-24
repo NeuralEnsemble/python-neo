@@ -14,7 +14,6 @@ import neo
 import quantities as pq
 import numpy as np
 
-
 ###############################################
 # Let's get a file
 # NeuralEnsemble maintains a wide variety of small test

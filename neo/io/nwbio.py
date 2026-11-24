@@ -34,7 +34,6 @@ from neo.io.proxyobjects import (
     SpikeTrainProxy as BaseSpikeTrainProxy,
 )
 
-
 logger = logging.getLogger("Neo")
 
 GLOBAL_ANNOTATIONS = (

@@ -179,13 +179,13 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         reader = BlackrockIO(filename=filename, nsx_to_load=5)
         seg = reader.read_segment()
         self.assertEqual(len(seg.analogsignals), 1)
-        self.assertEqual(seg.analogsignals[0].shape, (109224, 96))
+        self.assertEqual(seg.analogsignals[0].shape, (109225, 96))
 
         # load only ns2
         reader = BlackrockIO(filename=filename, nsx_to_load=2)
         seg = reader.read_segment()
         self.assertEqual(len(seg.analogsignals), 1)
-        self.assertEqual(seg.analogsignals[0].shape, (3640, 6))
+        self.assertEqual(seg.analogsignals[0].shape, (3641, 6))
 
         # load only ns2
         reader = BlackrockIO(filename=filename, nsx_to_load=[2])
@@ -196,14 +196,14 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         reader = BlackrockIO(filename=filename, nsx_to_load=[2, 5])
         seg = reader.read_segment()
         self.assertEqual(len(seg.analogsignals), 2)
-        self.assertEqual(seg.analogsignals[0].shape, (3640, 6))
-        self.assertEqual(seg.analogsignals[1].shape, (109224, 96))
+        self.assertEqual(seg.analogsignals[0].shape, (3641, 6))
+        self.assertEqual(seg.analogsignals[1].shape, (109225, 96))
 
         # load only ns5
         reader = BlackrockIO(filename=filename, nsx_to_load="max")
         seg = reader.read_segment()
         self.assertEqual(len(seg.analogsignals), 1)
-        self.assertEqual(seg.analogsignals[0].shape, (109224, 96))
+        self.assertEqual(seg.analogsignals[0].shape, (109225, 96))
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_compare_blackrockio_with_matlabloader_v21(self):
@@ -343,7 +343,9 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # And another one because there are spikes between segments
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            reader = BlackrockIO(filename=filename, nsx_to_load=2, nev_override=filename_nev_outside_seg)
+            reader = BlackrockIO(
+                filename=filename, nsx_to_load=2, nev_override=filename_nev_outside_seg, gap_tolerance_ms=0
+            )
             self.assertGreaterEqual(len(w), 2)
 
             # Check that warnings are correct
@@ -387,7 +389,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         self.assertEqual(len(block.segments[1].analogsignals[0][:]), 4000)
 
         # This case is correct, no spikes outside segment or anything
-        reader = BlackrockIO(filename=filename, nsx_to_load=2)
+        reader = BlackrockIO(filename=filename, nsx_to_load=2, gap_tolerance_ms=0)
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
         # 2 segments

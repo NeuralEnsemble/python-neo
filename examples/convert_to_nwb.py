@@ -8,7 +8,6 @@ from urllib.request import urlretrieve
 from urllib.parse import quote
 from neo.io import get_io
 
-
 dataset_url = "https://object.cscs.ch/v1/AUTH_63ea6845b1d34ad7a43c8158d9572867/hbp-d000017_PatchClamp-GranuleCells_pub"
 
 folder = "GrC_Subject15_180116"

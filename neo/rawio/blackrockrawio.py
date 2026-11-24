@@ -8,6 +8,7 @@ This work is based on:
   * Lyuba Zehl, Michael Denker - fourth version
   * Samuel Garcia, Julia Srenger - fifth version
   * Chadwick Boulay - FileSpec 3.0 and 3.0-PTP
+  * Heberto Mayorquin - Time segmentation fixes, reporting and refactoring
 
 This IO supports reading only.
 This IO is able to read:
@@ -60,10 +61,10 @@ TODO:
 """
 
 import datetime
+import mmap
 import os
 import re
 import warnings
-import math
 
 import numpy as np
 import quantities as pq
@@ -100,13 +101,46 @@ class BlackrockRawIO(BaseRawIO):
         must be set at the init before parse_header().
     load_nev: bool, default: True
         Load (or not) events/spikes by ignoring or not the nev file.
+    gap_tolerance_ms : float | None, default: None
+        Maximum acceptable gap size in milliseconds for automatic segmentation.
+
+        **Default behavior (None)**: If timestamp gaps are detected, an error is raised
+        with a detailed gap report. This ensures users are aware of data discontinuities.
+        Until neo 0.16, standard format files (v2.2/2.3/3.0) are instead split into one
+        segment per data block, as in earlier versions, with a FutureWarning.
+
+        **Opt-in segmentation**: Provide a value to automatically segment data at gaps
+        larger than this threshold. Gaps smaller than the threshold are ignored (data
+        treated as continuous).
+
+        Examples:
+
+        - None (default): Error on any detected gaps
+        - 1.0: Tolerate gaps up to 1 ms, segment on larger gaps
+        - 10.0: Tolerate gaps up to 10 ms (filters buffer artifacts)
+        - 100.0: Tolerate gaps up to 100 ms (only major pauses create segments)
+
+        Applies to:
+
+        - PTP format (v3.0-ptp): Gaps in per-sample timestamps
+        - Standard format (v2.2/2.3/3.0): Gaps between data blocks
+
+        An interval of up to 2 sampling periods is never a gap, so even 0 merges blocks
+        that close. Above 0, the samples after a merged gap are placed at
+        ``t_start + i / sampling_rate``, earlier than they were recorded by the gaps before
+        them. ``_get_blackrock_timestamps`` returns the recorded times.
 
     Notes
     -----
     * Note: This routine will handle files according to specification 2.1, 2.2,
-    2.3, 3.0 and 3.0-ptp. Recording pauses that may occur in file specifications
-    2.2 and 2.3 are automatically extracted and the data set is split into different
-    segments.
+    2.3, 3.0 and 3.0-ptp. Recording pauses in file specifications 2.2, 2.3 and 3.0
+    start a new data block. Until neo 0.16 each block is a segment by default, with a
+    FutureWarning. From 0.16 a gap between blocks raises an error with a gap report
+    unless ``gap_tolerance_ms`` is set.
+
+    * The times of spikes and events are compared with `t_start` and `t_stop` as float64 seconds, and
+    `t_stop` is exclusive. To include a spike at `t_stop`, such as the last of a segment, pass
+    `t_stop + 1e-5`.
 
     * The Blackrock data format consists not of a single file, but a set of
     different files. This constructor associates itself with a set of files
@@ -133,13 +167,22 @@ class BlackrockRawIO(BaseRawIO):
     # We need to document the origin of this value
     main_sampling_rate = 30000.0
 
+    # An interval between consecutive samples longer than this many sampling periods is a gap
+    _gap_detection_periods = 2
+
     def __init__(
-        self, filename=None, nsx_override=None, nev_override=None, nsx_to_load=None, load_nev=True, verbose=False
+        self,
+        filename=None,
+        nsx_override=None,
+        nev_override=None,
+        nsx_to_load=None,
+        load_nev=True,
+        verbose=False,
+        gap_tolerance_ms=None,
     ):
-        """
-        Initialize the BlackrockIO class.
-        """
         BaseRawIO.__init__(self)
+
+        self.gap_tolerance_ms = gap_tolerance_ms
 
         self.filename = str(filename)
 
@@ -186,33 +229,6 @@ class BlackrockRawIO(BaseRawIO):
 
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
-        # NSX
-        self._nsx_header_reader = {
-            "2.1": self._read_nsx_header_spec_v21,
-            "2.2": self._read_nsx_header_spec_v22_30,
-            "2.3": self._read_nsx_header_spec_v22_30,
-            "3.0": self._read_nsx_header_spec_v22_30,
-        }
-        self._nsx_dataheader_reader = {
-            "2.1": self._read_nsx_dataheader_spec_v21,
-            "2.2": self._read_nsx_dataheader_spec_v22_30,
-            "2.3": self._read_nsx_dataheader_spec_v22_30,
-            "3.0": self._read_nsx_dataheader_spec_v22_30,
-            "3.0-ptp": self._read_nsx_dataheader_spec_v30_ptp,
-        }
-        self._nsx_data_reader = {
-            "2.1": self._read_nsx_data_spec_v21,
-            "2.2": self._read_nsx_data_spec_v22_30,
-            "2.3": self._read_nsx_data_spec_v22_30,
-            "3.0": self._read_nsx_data_spec_v22_30,
-            "3.0-ptp": self._read_nsx_data_spec_v30_ptp,
-        }
-        self._nsx_params = {
-            "2.1": self._get_nsx_param_spec_v21,
-            "2.2": self._get_nsx_param_spec_v22_30,
-            "2.3": self._get_nsx_param_spec_v22_30,
-            "3.0": self._get_nsx_param_spec_v22_30,
-        }
         # NEV
         self._waveform_size = {
             "2.1": self._get_waveform_size_spec_v21,
@@ -256,7 +272,7 @@ class BlackrockRawIO(BaseRawIO):
 
             # read nev headers
             nev_filename = f"{self._filenames['nev']}.nev"
-            self._nev_basic_header, self._nev_ext_header = self._read_nev_header(self._nev_spec, nev_filename)
+            self._nev_basic_header, self._nev_ext_header = self._read_nev_header(self._nev_spec)
 
             self.nev_data = self._read_nev_data(self._nev_spec, nev_filename)
             spikes, spike_segment_ids = self.nev_data["Spikes"]
@@ -316,30 +332,13 @@ class BlackrockRawIO(BaseRawIO):
         for nsx_nb in self._avail_nsx:
             spec_version = self._nsx_spec[nsx_nb] = self._extract_nsx_file_spec(nsx_nb)
             # read nsx headers
-            nsx_header_reader = self._nsx_header_reader[spec_version]
-            self._nsx_basic_header[nsx_nb], self._nsx_ext_header[nsx_nb] = nsx_header_reader(nsx_nb)
+            self._nsx_basic_header[nsx_nb], self._nsx_ext_header[nsx_nb] = self._read_nsx_header(spec_version, nsx_nb)
 
             # The Blackrock defines period as the number of  1/30_000 seconds between data points
             # E.g. it is 1 for 30_000, 3 for 10_000, etc
             nsx_period = self._nsx_basic_header[nsx_nb]["period"]
             sampling_rate = 30_000.0 / nsx_period
             self._nsx_sampling_frequency[nsx_nb] = float(sampling_rate)
-
-        # Parase data packages
-        for nsx_nb in self._avail_nsx:
-
-            # The only way to know if it is the Precision Time Protocol of file spec 3.0
-            # is to check for nanosecond timestamp resolution.
-            is_ptp_variant = (
-                "timestamp_resolution" in self._nsx_basic_header[nsx_nb].dtype.names
-                and self._nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000
-            )
-            if is_ptp_variant:
-                nsx_dataheader_reader = self._nsx_dataheader_reader["3.0-ptp"]
-            else:
-                nsx_dataheader_reader = self._nsx_dataheader_reader[spec_version]
-            # for nsxdef get_analogsignal_shape(self, block_index, seg_index):
-            self._nsx_data_header[nsx_nb] = nsx_dataheader_reader(nsx_nb)
 
         # nsx_to_load can be either int, list, 'max', 'all' (aka None)
         # here make a list only
@@ -377,13 +376,6 @@ class BlackrockRawIO(BaseRawIO):
             # Remove if raw loading becomes possible
             # raise IOError("For loading Blackrock file version 2.1 .nev files are required!")
 
-        # This requires nsX to be parsed already
-        # Needs to be called when no nsX are available as well in order to warn the user
-        if self._avail_files["nev"]:
-            for nsx_nb in self.nsx_to_load:
-                self._match_nsx_and_nev_segment_ids(nsx_nb)
-
-        self.nsx_datas = {}
         # Keep public attribute for backward compatibility but let's use the private one and maybe deprecate this at some point
         self.sig_sampling_rates = {
             nsx_number: self._nsx_sampling_frequency[nsx_number] for nsx_number in self.nsx_to_load
@@ -399,24 +391,27 @@ class BlackrockRawIO(BaseRawIO):
                     and basic_header["timestamp_resolution"] == 1_000_000_000
                 )
                 if is_ptp_variant:
-                    _data_reader_fun = self._nsx_data_reader["3.0-ptp"]
+                    data_spec = "3.0-ptp"
                 else:
-                    _data_reader_fun = self._nsx_data_reader[spec_version]
-                self.nsx_datas[nsx_nb] = _data_reader_fun(nsx_nb)
+                    data_spec = spec_version
+
+                # Parse data blocks (extracts offsets, sample counts, timestamps)
+                parsed_data_headers = self._parse_nsx_data(data_spec, nsx_nb)
+
+                # Segment the data (analyzes gaps, creates per-segment metadata)
+                self._nsx_data_header[nsx_nb] = self._segment_nsx_data(parsed_data_headers, nsx_nb)
+
+                # Match NSX and NEV segments for v2.3
+                if self._avail_files["nev"]:
+                    self._match_nsx_and_nev_segment_ids(nsx_nb)
 
                 sr = self._nsx_sampling_frequency[nsx_nb]
 
                 if spec_version in ["2.2", "2.3", "3.0"]:
                     ext_header = self._nsx_ext_header[nsx_nb]
                 elif spec_version == "2.1":
-                    ext_header = []
-                    keys = ["labels", "units", "min_analog_val", "max_analog_val", "min_digital_val", "max_digital_val"]
-                    params = self._nsx_params[spec_version](nsx_nb)
-                    for i in range(len(params["labels"])):
-                        d = {}
-                        for key in keys:
-                            d[key] = params[key][i]
-                        ext_header.append(d)
+                    # v2.1 has no extended headers - construct from NEV digitization factors
+                    ext_header = self._build_nsx_v21_ext_header(nsx_nb)
 
                 if len(ext_header) > 0:
                     # in blackrock : one stream per buffer so same id
@@ -448,7 +443,7 @@ class BlackrockRawIO(BaseRawIO):
                     signal_channels.append((ch_name, ch_id, sr, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
             # check nb segment per nsx
-            nb_segments_for_nsx = [len(self.nsx_datas[nsx_nb]) for nsx_nb in self.nsx_to_load]
+            nb_segments_for_nsx = [len(self._nsx_data_header[nsx_nb]) for nsx_nb in self.nsx_to_load]
             if not all(nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx):
                 raise NeoReadWriteError("Segment nb not consistent across nsX files")
             self._nb_segment = nb_segments_for_nsx[0]
@@ -465,24 +460,37 @@ class BlackrockRawIO(BaseRawIO):
                     if "timestamp_resolution" in self._nsx_basic_header[nsx_nb].dtype.names:
                         ts_res = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]
                     elif spec == "2.1":
-                        ts_res = self._nsx_params[spec](nsx_nb)["timestamp_resolution"]
+                        ts_res = 30_000  # v2.1 always uses 30kHz timestamp resolution
                     else:
                         ts_res = 30_000
                     period = self._nsx_basic_header[nsx_nb]["period"]
                     sec_per_samp = period / 30_000  # Maybe 30_000 should be ['sample_resolution']
-                    length = self.nsx_datas[nsx_nb][data_bl].shape[0]
-                    if self._nsx_data_header[nsx_nb] is None:
+                    seg_header = self._nsx_data_header[nsx_nb][data_bl]
+                    length = seg_header["nb_data_points"]
+                    timestamp = seg_header["timestamp"]
+
+                    if "timestamps_memmap_kwargs" in seg_header:
+                        # FileSpec 3.0 with PTP -- read first/last timestamps on demand
+                        ts_kw = seg_header["timestamps_memmap_kwargs"]
+                        fid = self._get_nsx_file_handle(nsx_nb)
+                        ts_array = self._create_mmap_view(
+                            fid=fid,
+                            dtype=ts_kw["dtype"],
+                            offset=ts_kw["offset"],
+                            num_samples=ts_kw["num_samples"],
+                            packet_size=ts_kw.get("packet_size"),
+                            item_offset=ts_kw.get("item_offset", 0),
+                        )
+                        t_start = float(ts_array[0]) / ts_res
+                        t_stop = max(t_stop, float(ts_array[-1]) / ts_res + sec_per_samp)
+                    elif timestamp is None:
+                        # V2.1 format has no timestamps
                         t_start = 0.0
                         t_stop = max(t_stop, length / self._nsx_sampling_frequency[nsx_nb])
                     else:
-                        timestamps = self._nsx_data_header[nsx_nb][data_bl]["timestamp"]
-                        if hasattr(timestamps, "size") and timestamps.size == length:
-                            # FileSpec 3.0 with PTP -- use the per-sample timestamps
-                            t_start = timestamps[0] / ts_res
-                            t_stop = max(t_stop, timestamps[-1] / ts_res + sec_per_samp)
-                        else:
-                            t_start = timestamps / ts_res
-                            t_stop = max(t_stop, t_start + length / self._nsx_sampling_frequency[nsx_nb])
+                        # Standard format with scalar timestamp
+                        t_start = timestamp / ts_res
+                        t_stop = max(t_stop, t_start + length / self._nsx_sampling_frequency[nsx_nb])
                     self._sigs_t_starts[nsx_nb].append(t_start)
 
                 if self._avail_files["nev"]:
@@ -648,38 +656,319 @@ class BlackrockRawIO(BaseRawIO):
     def _get_signal_size(self, block_index, seg_index, stream_index):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         nsx_nb = int(stream_id)
-        memmap_data = self.nsx_datas[nsx_nb][seg_index]
-        return memmap_data.shape[0]
+        return self._nsx_data_header[nsx_nb][seg_index]["nb_data_points"]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         nsx_nb = int(stream_id)
         return self._sigs_t_starts[nsx_nb][seg_index]
 
+    @staticmethod
+    def _create_mmap_view(fid, dtype, offset, num_samples, num_channels=None, packet_size=None, item_offset=0):
+        """
+        Create an np.ndarray view over a raw mmap buffer from an open file.
+
+        When packet_size is None, creates a standard contiguous view (for
+        standard/v2.1 formats where samples are stored contiguously as int16).
+
+        When packet_size is provided, creates a strided view that extracts
+        interleaved fields from PTP packets. Each packet has a fixed size,
+        and the target field starts at item_offset bytes into the packet.
+        The stride between rows equals packet_size, allowing the view to
+        skip over other fields (timestamps, reserved bytes, etc.).
+
+        Parameters
+        ----------
+        fid : file-like
+            Open file object (must support .fileno()).
+        dtype : str or np.dtype
+            Data type of the target field (e.g. "int16" for samples,
+            "uint64" for timestamps).
+        offset : int
+            Byte offset in the file where the data region starts.
+        num_samples : int
+            Number of samples (rows) to read.
+        num_channels : int or None
+            Number of channels (columns). None for 1D arrays (e.g. timestamps).
+        packet_size : int or None
+            Stride between consecutive rows in bytes. None for contiguous data.
+        item_offset : int
+            Byte offset of the target field within each packet.
+
+        Returns
+        -------
+        np.ndarray
+            View into the memory-mapped file. Shape is (num_samples, num_channels)
+            when num_channels is provided, or (num_samples,) otherwise.
+        """
+        dtype = np.dtype(dtype)
+
+        if num_channels is not None:
+            shape = (num_samples, num_channels)
+        else:
+            shape = (num_samples,)
+
+        if packet_size is None:
+            bytes_per_sample = dtype.itemsize * (num_channels if num_channels is not None else 1)
+            start_byte = offset
+            length = num_samples * bytes_per_sample
+        else:
+            start_byte = offset + item_offset
+            length = (num_samples - 1) * packet_size + (
+                dtype.itemsize * num_channels if num_channels is not None else dtype.itemsize
+            )
+
+        # mmap offset must be aligned to ALLOCATIONGRANULARITY
+        mmap_offset, start_remainder = divmod(start_byte, mmap.ALLOCATIONGRANULARITY)
+        mmap_offset *= mmap.ALLOCATIONGRANULARITY
+        length += start_remainder
+
+        raw_mmap = mmap.mmap(fid.fileno(), length=length, access=mmap.ACCESS_READ, offset=mmap_offset)
+
+        if packet_size is not None:
+            strides = (packet_size, dtype.itemsize) if num_channels is not None else (packet_size,)
+        else:
+            strides = None  # default contiguous strides
+
+        return np.ndarray(
+            shape=shape,
+            dtype=dtype,
+            buffer=raw_mmap,
+            offset=start_remainder,
+            strides=strides,
+        )
+
+    def _get_nsx_file_handle(self, nsx_nb):
+        """Open NSX file on demand and cache the file handle for reuse."""
+        if not hasattr(self, "_nsx_file_handles_dict"):
+            self._nsx_file_handles_dict = {}
+        if nsx_nb not in self._nsx_file_handles_dict:
+            filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+            self._nsx_file_handles_dict[nsx_nb] = open(filename, "rb")
+        return self._nsx_file_handles_dict[nsx_nb]
+
+    def _get_nev_file_handle(self):
+        """Open NEV file on demand and cache the file handle for reuse."""
+        if not hasattr(self, "_nev_file_handle"):
+            filename = f"{self._filenames['nev']}.nev"
+            self._nev_file_handle = open(filename, "rb")
+        return self._nev_file_handle
+
+    def __del__(self):
+        if hasattr(self, "_nsx_file_handles_dict"):
+            for file_handle in self._nsx_file_handles_dict.values():
+                file_handle.close()
+            del self._nsx_file_handles_dict
+        if hasattr(self, "_nev_file_handle"):
+            self._nev_file_handle.close()
+            del self._nev_file_handle
+
+    def __getstate__(self):
+        # Open files cannot be pickled. The getters above reopen them on the first read after unpickling.
+        state = self.__dict__.copy()
+        state.pop("_nsx_file_handles_dict", None)
+        state.pop("_nev_file_handle", None)
+        return state
+
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         nsx_nb = int(stream_id)
-        memmap_data = self.nsx_datas[nsx_nb][seg_index]
+        seg = self._nsx_data_header[nsx_nb][seg_index]
+        fid = self._get_nsx_file_handle(nsx_nb)
+        memmap_specs = seg["memmap_specs"]
+        channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
         if channel_indexes is None:
             channel_indexes = slice(None)
-        sig_chunk = memmap_data[i_start:i_stop, channel_indexes]
-        return sig_chunk
+
+        if len(memmap_specs) > 1:
+            return self._read_multi_block_chunk(fid, memmap_specs, channels, i_start, i_stop, channel_indexes)
+
+        memmap_kwargs = memmap_specs[0]
+        data = self._create_mmap_view(
+            fid=fid,
+            dtype=memmap_kwargs["dtype"],
+            offset=memmap_kwargs["offset"],
+            num_samples=memmap_kwargs["num_samples"],
+            num_channels=memmap_kwargs.get("num_channels", channels),
+            packet_size=memmap_kwargs.get("packet_size"),
+            item_offset=memmap_kwargs.get("item_offset", 0),
+        )
+        return data[i_start:i_stop, channel_indexes]
+
+    def _read_multi_block_chunk(self, fid, memmap_specs, channels, i_start, i_stop, channel_indexes):
+        """
+        Read a chunk from a segment that merges several data blocks.
+
+        Each block lives at its own file offset, so a contiguous sample range can
+        straddle several of them.
+
+        Parameters
+        ----------
+        fid : file-like
+            Open file object (must support .fileno()).
+        memmap_specs : list[dict]
+            One spec per block in the segment, in acquisition order.
+        channels : int
+            Number of channels (columns) in the int16 data matrix.
+        i_start : int or None
+            First sample index, relative to the segment. None means 0.
+        i_stop : int or None
+            Stop sample index (exclusive), relative to the segment. None means the end.
+        channel_indexes : slice or array-like
+            Which channels to return.
+
+        Returns
+        -------
+        np.ndarray
+            Signal data of shape (i_stop - i_start, len(channel_indexes)), dtype int16.
+            A range inside a single block is a view; otherwise the blocks are copied
+            into one array.
+        """
+        total_samples = sum(spec["num_samples"] for spec in memmap_specs)
+        if i_start is None:
+            i_start = 0
+        # A stop past the end returns fewer rows, as slicing a single block does
+        i_stop = total_samples if i_stop is None else min(i_stop, total_samples)
+
+        # Row slicing keeps these as views, so nothing is read until used below
+        block_views = []
+        block_start = 0
+        for spec in memmap_specs:
+            block_stop = block_start + spec["num_samples"]
+            if block_stop > i_start and block_start < i_stop:
+                data = self._create_mmap_view(
+                    fid=fid,
+                    dtype=spec["dtype"],
+                    offset=spec["offset"],
+                    num_samples=spec["num_samples"],
+                    num_channels=spec.get("num_channels", channels),
+                    packet_size=spec.get("packet_size"),
+                    item_offset=spec.get("item_offset", 0),
+                )
+                local_start = max(0, i_start - block_start)
+                local_stop = min(spec["num_samples"], i_stop - block_start)
+                block_views.append(data[local_start:local_stop])
+            block_start = block_stop
+
+        if len(block_views) == 1:
+            return block_views[0][:, channel_indexes]
+
+        # Fill one array rather than concatenating: the blocks are never all held at
+        # once, and a range touching no block still gives a correctly shaped result
+        selected_channel_count = np.arange(channels)[channel_indexes].size
+        out = np.empty((i_stop - i_start, selected_channel_count), dtype=memmap_specs[0]["dtype"])
+        position = 0
+        for block_view in block_views:
+            out[position : position + len(block_view)] = block_view[:, channel_indexes]
+            position += len(block_view)
+        return out
+
+    def _get_blackrock_timestamps(self, block_index, seg_index, i_start, i_stop, stream_index):
+        """
+        Return timestamps in seconds for analog signal samples in the given range.
+
+        The behavior depends on the file format:
+
+        - **PTP format (FileSpec 3.0-ptp):** Each packet in the file contains
+          exactly one sample with its own PTP hardware timestamp at nanosecond
+          resolution. This method returns those actual timestamps converted to
+          seconds. Because each NSx file (e.g. ns2 at 1kHz, ns6 at 30kHz) stores
+          its own independent PTP packets, every sample has a real timestamp.
+          Note that PTP timestamps exhibit natural clock jitter at the
+          nanosecond scale, so consecutive sample intervals are not perfectly
+          uniform.
+
+        - **Standard formats (FileSpec 2.2, 2.3, 3.0 non-PTP):** Each data
+          block has a single scalar timestamp for its first sample. All
+          subsequent samples within the block are interpolated as
+          ``block_timestamp + sample_index_within_block / sampling_rate``,
+          assuming uniform spacing. A segment may merge several blocks, so the
+          interpolation is per block and steps across the pause between them.
+
+        - **FileSpec 2.1:** No timestamps are stored in the file. All samples
+          are interpolated from ``t_start=0`` using the sampling rate.
+
+        The times returned do not depend on ``gap_tolerance_ms``, which decides
+        how samples are grouped into segments rather than when they were
+        recorded.
+
+        Parameters
+        ----------
+        block_index : int
+            Block index.
+        seg_index : int
+            Segment index.
+        i_start : int | None
+            First sample index. None means 0.
+        i_stop : int | None
+            Stop sample index (exclusive). None means end of segment.
+        stream_index : int
+            Stream index.
+
+        Returns
+        -------
+        timestamps : np.ndarray (float64)
+            Timestamps in seconds for each sample in [i_start, i_stop).
+        """
+        stream_id = self.header["signal_streams"][stream_index]["id"]
+        nsx_nb = int(stream_id)
+        seg = self._nsx_data_header[nsx_nb][seg_index]
+
+        # Resolve None to concrete indices
+        size = seg["nb_data_points"]
+        i_start = i_start if i_start is not None else 0
+        i_stop = i_stop if i_stop is not None else size
+
+        # PTP format: read timestamps on demand via strided mmap view
+        if "timestamps_memmap_kwargs" in seg:
+            ts_kw = seg["timestamps_memmap_kwargs"]
+            fid = self._get_nsx_file_handle(nsx_nb)
+            timestamps = self._create_mmap_view(
+                fid=fid,
+                dtype=ts_kw["dtype"],
+                offset=ts_kw["offset"],
+                num_samples=ts_kw["num_samples"],
+                packet_size=ts_kw.get("packet_size"),
+                item_offset=ts_kw.get("item_offset", 0),
+            )
+            ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
+            return timestamps[i_start:i_stop].astype("float64") / ts_res
+        else:
+            sr = self._nsx_sampling_frequency[nsx_nb]
+            block_timestamps = seg.get("block_timestamps")
+
+            if block_timestamps is None or len(block_timestamps) == 1:
+                # One block, so the segment's t_start is that block's recorded start
+                t_start = self._sigs_t_starts[nsx_nb][seg_index]
+                return t_start + np.arange(i_start, i_stop, dtype="float64") / sr
+
+            # Several blocks merged: the segment's single t_start cannot express the
+            # pauses between them, but each block recorded its own start
+            ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
+            timestamps = np.empty(i_stop - i_start, dtype="float64")
+            block_start = 0
+            for block_timestamp, spec in zip(block_timestamps, seg["memmap_specs"]):
+                block_stop = block_start + spec["num_samples"]
+                first = max(i_start, block_start)
+                last = min(i_stop, block_stop)
+                if last > first:
+                    within_block = np.arange(first - block_start, last - block_start, dtype="float64")
+                    timestamps[first - i_start : last - i_start] = float(block_timestamp) / ts_res + within_block / sr
+                block_start = block_stop
+            return timestamps
 
     def _spike_count(self, block_index, seg_index, unit_index):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
 
-        all_spikes = self.nev_data["Spikes"][0]
-        mask = (all_spikes["packet_id"] == channel_id) & (all_spikes["unit_class_nb"] == unit_id)
-        if self._nb_segment == 1:
-            # very fast
-            nb = int(np.sum(mask))
-        else:
-            # must clip in time time range
-            timestamp = all_spikes[mask]["timestamp"]
-            sl = self._get_timestamp_slice(timestamp, seg_index, None, None)
-            timestamp = timestamp[sl]
-            nb = timestamp.size
-        return nb
+        all_spikes, event_segment_ids = self.nev_data["Spikes"]
+        # Selected by segment id, as _get_spike_timestamps does, so the count always equals
+        # the number of timestamps it returns.
+        mask = (
+            (all_spikes["packet_id"] == channel_id)
+            & (all_spikes["unit_class_nb"] == unit_id)
+            & (event_segment_ids == seg_index)
+        )
+        return int(np.sum(mask))
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
@@ -701,27 +990,27 @@ class BlackrockRawIO(BaseRawIO):
         return timestamp
 
     def _get_timestamp_slice(self, timestamp, seg_index, t_start, t_stop):
-        if self._nb_segment > 1:
-            # we must clip event in seg time limits
-            if t_start is None:
-                t_start = self._seg_t_starts[seg_index]
-            if t_stop is None:
-                t_stop = self._seg_t_stops[seg_index] + 1 / float(self._nev_basic_header["timestamp_resolution"])
+        """
+        Slice of `timestamp` (one segment's, in file order) within [t_start, t_stop), in seconds.
 
-        if t_start is None:
-            ind_start = None
-        else:
-            ts = math.ceil(t_start * self._nev_basic_header["timestamp_resolution"])
-            ind_start = np.searchsorted(timestamp, ts)
+        The segment itself is already selected by segment id, so None means no limit.
 
-        if t_stop is None:
-            ind_stop = None
-        else:
-            ts = int(t_stop * self._nev_basic_header["timestamp_resolution"])
-            ind_stop = np.searchsorted(timestamp, ts)  # +1
+        The bounds are compared with the times neo reports (the timestamps in float64 seconds), so a
+        time obtained from neo, such as `segment_t_start`, selects the item it came from. Converting the
+        bounds to ticks instead does not work at the 1 ns resolution of PTP files: a float64 number of
+        seconds (about 1.75e9) is only precise to about 240 ns, so the converted bound can fall a few
+        ticks past the item and drop it, and np.searchsorted compares uint64 with a Python int as float64.
 
-        sl = slice(ind_start, ind_stop)
-        return sl
+        `t_stop` is exclusive. To include an item at `t_stop`, such as the last of a segment,
+        pass `t_stop + 1e-5` (10 us, shorter than the interval between samples at 30 kHz and longer
+        than the precision of float64 seconds).
+        """
+        if t_start is None and t_stop is None:
+            return slice(None)
+        times = timestamp.astype("float64") / self._nev_basic_header["timestamp_resolution"]
+        ind_start = None if t_start is None else np.searchsorted(times, t_start, side="left")
+        ind_stop = None if t_stop is None else np.searchsorted(times, t_stop, side="left")
+        return slice(ind_start, ind_stop)
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
@@ -739,22 +1028,32 @@ class BlackrockRawIO(BaseRawIO):
         )
         unit_spikes = all_spikes[mask]
 
+        timestamp = unit_spikes["timestamp"]
+        sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
+        unit_spikes = unit_spikes[sl]
+
+        # Read the waveforms of only these spikes, from the positions of their packets in the file
+        packet_size_bytes = int(self._nev_basic_header["bytes_in_data_packets"])
+        spike_packets = self._create_mmap_view(
+            fid=self._get_nev_file_handle(),
+            dtype=NEV_PACKET_DATA_TYPES_BY_SPEC[self._nev_spec]["Spikes"](packet_size_bytes),
+            offset=int(self._nev_basic_header["bytes_in_headers"]),
+            num_samples=self._nev_packet_count,
+        )
+        raw_waveforms = spike_packets["waveform"][unit_spikes["position"]]
+
         wf_dtype = self._nev_params("waveform_dtypes")[channel_id]
         wf_size = self._nev_params("waveform_size")[channel_id]
         wf_byte_size = np.dtype(wf_dtype).itemsize * wf_size
 
         dt1 = [
-            ("extra", "S{}".format(unit_spikes["waveform"].dtype.itemsize - wf_byte_size)),
+            ("extra", "S{}".format(raw_waveforms.dtype.itemsize - wf_byte_size)),
             ("ch_waveform", "S{}".format(wf_byte_size)),
         ]
 
-        waveforms = unit_spikes["waveform"].view(dt1)["ch_waveform"].flatten().view(wf_dtype)
+        waveforms = raw_waveforms.view(dt1)["ch_waveform"].flatten().view(wf_dtype)
 
         waveforms = waveforms.reshape(int(unit_spikes.size), 1, int(wf_size))
-
-        timestamp = unit_spikes["timestamp"]
-        sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
-        waveforms = waveforms[sl]
 
         return waveforms
 
@@ -766,17 +1065,9 @@ class BlackrockRawIO(BaseRawIO):
         else:
             events_data, event_segment_ids = self.nev_data["NonNeural"]
             ev_dict = self._nonneural_evdicts[self._nev_spec](events_data)[name]
+        # Selected by segment id, as _get_event_timestamps does.
         mask = ev_dict["mask"] & (event_segment_ids == seg_index)
-        if self._nb_segment == 1:
-            # very fast
-            nb = int(np.sum(mask))
-        else:
-            # must clip in time time range
-            timestamp = events_data[ev_dict["mask"]]["timestamp"]
-            sl = self._get_timestamp_slice(timestamp, seg_index, None, None)
-            timestamp = timestamp[sl]
-            nb = timestamp.size
-        return nb
+        return int(np.sum(mask))
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         name = self.header["event_channels"]["name"][event_channel_index]
@@ -819,13 +1110,13 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract file specification from an .nsx file.
         """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-
         # Header structure of files specification 2.2 and higher. For files 2.1
         # and lower, the entries ver_major and ver_minor are not supported.
         dt0 = [("file_id", "S8"), ("ver_major", "uint8"), ("ver_minor", "uint8")]
 
-        nsx_file_id = np.fromfile(filename, count=1, dtype=dt0)[0]
+        fid = self._get_nsx_file_handle(nsx_nb)
+        fid.seek(0)
+        nsx_file_id = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
         if nsx_file_id["file_id"].decode() == "NEURALSG":
             spec = "2.1"
         elif nsx_file_id["file_id"].decode() in ["NEURALCD", "BRSMPGRP"]:
@@ -839,12 +1130,13 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract file specification from an .nev file
         """
-        filename = f"{self._filenames['nev']}.nev"
         # Header structure of files specification 2.2 and higher. For files 2.1
         # and lower, the entries ver_major and ver_minor are not supported.
         dt0 = [("file_id", "S8"), ("ver_major", "uint8"), ("ver_minor", "uint8")]
 
-        nev_file_id = np.fromfile(filename, count=1, dtype=dt0)[0]
+        fid = self._get_nev_file_handle()
+        fid.seek(0)
+        nev_file_id = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
         if nev_file_id["file_id"].decode() in ["NEURALEV", "BREVENTS"]:
             spec = f"{nev_file_id['ver_major']}.{nev_file_id['ver_minor']}"
         else:
@@ -852,356 +1144,731 @@ class BlackrockRawIO(BaseRawIO):
 
         return spec
 
-    def _read_nsx_header_spec_v21(self, nsx_nb):
+    def _read_nsx_header(self, spec, nsx_nb):
         """
-        Extract nsx header information from a 2.1 .nsx file
+        Extract nsx header information for any specification version.
+
+        Parameters
+        ----------
+        spec : str
+            The specification version (e.g., "2.1", "2.2", "2.3", "3.0")
+        nsx_nb : int
+            The NSX file number (e.g., 5 for ns5)
+
+        Returns
+        -------
+        nsx_basic_header : numpy structured array
+            Basic header information
+        nsx_ext_header : numpy memmap
+            Extended header information
         """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+        fid = self._get_nsx_file_handle(nsx_nb)
 
-        # basic header (file_id: NEURALCD)
-        dt0 = [
-            ("file_id", "S8"),
-            # label of sampling group (e.g. "1kS/s" or "LFP Low")
-            ("label", "S16"),
-            # number of 1/30000 seconds between data points
-            # (e.g., if sampling rate "1 kS/s", period equals "30")
-            ("period", "uint32"),
-            ("channel_count", "uint32"),
-        ]
+        # Get basic header structure for this spec
+        basic_header_dtype = NSX_BASIC_HEADER_TYPES[spec]
+        fid.seek(0)
+        nsx_basic_header = np.frombuffer(
+            fid.read(np.dtype(basic_header_dtype).itemsize), dtype=basic_header_dtype, count=1
+        )[0]
 
-        nsx_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
-        # Note: it is not possible to use recfunctions to append_fields of 'timestamp_resolution',
-        #  because the size of this object is used as the header size in later read operations.
-
-        # "extended" header (last field of file_id: NEURALCD)
-        # (to facilitate compatibility with higher file specs)
-        offset_dt0 = np.dtype(dt0).itemsize
-        shape = nsx_basic_header["channel_count"]
-        # originally called channel_id in Blackrock user manual
-        # (to facilitate compatibility with higher file specs)
-        dt1 = [("electrode_id", "uint32")]
-
-        nsx_ext_header = np.memmap(filename, shape=shape, offset=offset_dt0, dtype=dt1, mode="r")
-
-        return nsx_basic_header, nsx_ext_header
-
-    def _read_nsx_header_spec_v22_30(self, nsx_nb):
-        """
-        Extract nsx header information from a 2.2 or 2.3 .nsx file
-        """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-
-        # basic header (file_id: NEURALCD)
-        dt0 = [
-            ("file_id", "S8"),  # achFileType
-            # file specification split into major and minor version number
-            ("ver_major", "uint8"),
-            ("ver_minor", "uint8"),
-            # bytes of basic & extended header
-            ("bytes_in_headers", "uint32"),
-            # label of the sampling group (e.g., "1 kS/s" or "LFP low")
-            ("label", "S16"),
-            ("comment", "S256"),
-            ("period", "uint32"),
-            ("timestamp_resolution", "uint32"),
-            # time origin: 2byte uint16 values for ...
-            ("year", "uint16"),
-            ("month", "uint16"),
-            ("weekday", "uint16"),
-            ("day", "uint16"),
-            ("hour", "uint16"),
-            ("minute", "uint16"),
-            ("second", "uint16"),
-            ("millisecond", "uint16"),
-            # number of channel_count match number of extended headers
-            ("channel_count", "uint32"),
-        ]
-
-        nsx_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
-
-        # extended header (type: CC)
-        offset_dt0 = np.dtype(dt0).itemsize
-        dt1 = [
-            ("type", "S2"),
-            ("electrode_id", "uint16"),
-            ("electrode_label", "S16"),
-            # used front-end amplifier bank (e.g., A, B, C, D)
-            ("physical_connector", "uint8"),
-            # used connector pin (e.g., 1-37 on bank A, B, C or D)
-            ("connector_pin", "uint8"),
-            # digital and analog value ranges of the signal
-            ("min_digital_val", "int16"),
-            ("max_digital_val", "int16"),
-            ("min_analog_val", "int16"),
-            ("max_analog_val", "int16"),
-            # units of the analog range values ("mV" or "uV")
-            ("units", "S16"),
-            # filter settings used to create nsx from source signal
-            ("hi_freq_corner", "uint32"),
-            ("hi_freq_order", "uint32"),
-            ("hi_freq_type", "uint16"),  # 0=None, 1=Butterworth, 2=Chebyshev
-            ("lo_freq_corner", "uint32"),
-            ("lo_freq_order", "uint32"),
-            ("lo_freq_type", "uint16"),
-        ]  # 0=None, 1=Butterworth, 2=Chebyshev
-
+        # Get extended header structure for this spec
+        ext_header_dtype = NSX_EXT_HEADER_TYPES[spec]
+        offset_dt0 = np.dtype(basic_header_dtype).itemsize
         channel_count = int(nsx_basic_header["channel_count"])
-        nsx_ext_header = np.memmap(filename, shape=channel_count, offset=offset_dt0, dtype=dt1, mode="r")
+        fid.seek(offset_dt0)
+        nsx_ext_header = np.frombuffer(
+            fid.read(channel_count * np.dtype(ext_header_dtype).itemsize),
+            dtype=ext_header_dtype,
+            count=channel_count,
+        )
 
         return nsx_basic_header, nsx_ext_header
 
-    def _read_nsx_dataheader(self, nsx_nb, offset):
+    def _read_nsx_dataheader(self, spec, nsx_nb, offset):
         """
         Reads data header following the given offset of an nsx file.
+
+        Parameters
+        ----------
+        spec : str
+            The specification version (e.g., "2.2", "2.3", "3.0")
+        nsx_nb : int
+            The NSX file number
+        offset : int
+            Offset position in the file
         """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+        # Get data header structure for this spec
+        data_header_dtype = NSX_DATA_HEADER_TYPES[spec]
+        if data_header_dtype is None:
+            return None  # v2.1 has no data headers
 
-        major_version = self._nsx_basic_header[nsx_nb]["ver_major"]
-        ts_size = "uint64" if major_version >= 3 else "uint32"
+        fid = self._get_nsx_file_handle(nsx_nb)
+        fid.seek(offset)
+        nsx_basic_header = np.frombuffer(
+            fid.read(np.dtype(data_header_dtype).itemsize), dtype=data_header_dtype, count=1
+        )[0]
 
-        # dtypes data header, the header flag is always set to 1
-        dt2 = [("header_flag", "uint8"), ("timestamp", ts_size), ("nb_data_points", "uint32")]
+        return nsx_basic_header
 
-        packet_header = np.memmap(filename, dtype=dt2, shape=1, offset=offset, mode="r")[0]
-
-        return packet_header
-
-    def _read_nsx_dataheader_spec_v21(self, nsx_nb, filesize=None, offset=None):
+    def _parse_nsx_data(self, spec, nsx_nb):
         """
-        Reads None for the nsx data header of file spec 2.1. Introduced to
-        facilitate compatibility with higher file spec.
-        """
+        Parse NSX data blocks from file and extract data with timestamps.
 
-        return None
+        This is the main router function for NSX data parsing. It creates a memory-mapped
+        view of the file internally and extracts data blocks with their associated timestamps.
 
-    def _read_nsx_dataheader_spec_v22_30(
-        self,
-        nsx_nb,
-        filesize=None,
-        offset=None,
-    ):
-        """
-        Reads the nsx data header for each data block following the offset of
-        file spec 2.2, 2.3, and 3.0.
-        """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+        The function handles three different NSX file format variants, each with different
+        internal structure for storing data and timestamps.
 
-        filesize_bytes = self._get_file_size(filename)
+        NSX FILE FORMAT VARIANTS
+        ========================
 
-        data_header = {}
-        if offset is None:
-            offset_to_first_data_block = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
-        else:
-            offset_to_first_data_block = int(offset)
+        STANDARD FORMAT (v2.2, v2.3, v3.0 non-PTP)
+        ------------------------------------------
+        File structure:
+        ┌─────────────────────────────────────────────┐
+        │ BASIC HEADER (fixed size)                   │  ← File metadata
+        │ - file_id, version, period, etc.            │
+        ├─────────────────────────────────────────────┤
+        │ EXTENDED HEADER (per channel)               │  ← Channel info
+        │ - electrode_id, label, units, etc.          │
+        ├─────────────────────────────────────────────┤
+        │ DATA BLOCK 1 HEADER                         │  ← Block metadata
+        │ - header_flag=1                             │
+        │ - timestamp (scalar, e.g., 0)               │
+        │ - nb_data_points (e.g., 1000)               │
+        ├─────────────────────────────────────────────┤
+        │ DATA BLOCK 1 DATA                           │  ← Actual samples
+        │ - 1000 samples x N channels                 │
+        │ - int16 values                              │
+        ├─────────────────────────────────────────────┤
+        │ DATA BLOCK 2 HEADER                         │  ← Next block
+        │ - header_flag=1                             │
+        │ - timestamp (scalar, e.g., 30000)           │
+        │ - nb_data_points (e.g., 1000)               │
+        ├─────────────────────────────────────────────┤
+        │ DATA BLOCK 2 DATA                           │
+        │ - 1000 samples x N channels                 │
+        └─────────────────────────────────────────────┘
 
-        channel_count = int(self._nsx_basic_header[nsx_nb]["channel_count"])
-        current_offset_bytes = offset_to_first_data_block
-        data_block_index = 0
-        while current_offset_bytes < filesize_bytes:
-            packet_header = self._read_nsx_dataheader(nsx_nb, current_offset_bytes)
-            header_flag = packet_header["header_flag"]
-            # NSX data blocks must have header_flag = 1, other values indicate file corruption
-            if header_flag != 1:
-                raise ValueError(
-                    f"Invalid NSX data block header at offset {current_offset_bytes:#x} in ns{nsx_nb} file. "
-                    f"Expected header_flag=1, got {header_flag}. "
-                    f"This may indicate file corruption or unsupported NSX format variant. "
-                    f"Block index: {data_block_index}, File size: {filesize_bytes} bytes"
-                )
-            timestamp = packet_header["timestamp"]
-            num_data_points = int(packet_header["nb_data_points"])
-            offset_to_data_block_start = current_offset_bytes + packet_header.dtype.itemsize
+        Key characteristics:
+        - Headers are EXPLICIT and SPARSE (only at block boundaries)
+        - Each block has ONE scalar timestamp for ALL samples in that block
+        - Reader LOOPS through file, finding headers
 
-            data_header[data_block_index] = {
-                "header": header_flag,
-                "timestamp": timestamp,
-                "nb_data_points": num_data_points,
-                "offset_to_data_block": offset_to_data_block_start,
-            }
+        PTP FORMAT (v3.0 with Precision Time Protocol)
+        -----------------------------------------------
+        File structure:
+        ┌─────────────────────────────────────────────┐
+        │ BASIC HEADER (fixed size)                   │
+        │ - timestamp_resolution = 1,000,000,000      │  ← Nanosecond precision!
+        ├─────────────────────────────────────────────┤
+        │ EXTENDED HEADER (per channel)               │
+        ├─────────────────────────────────────────────┤
+        │ PACKET 0:                                   │  ← Each sample = packet
+        │ - reserved (1 byte)                         │
+        │ - timestamp (8 bytes, e.g., 1000)           │
+        │ - num_data_points (always 1)                │
+        │ - samples (N channels x int16)              │
+        ├─────────────────────────────────────────────┤
+        │ PACKET 1:                                   │
+        │ - reserved                                  │
+        │ - timestamp (e.g., 1033)                    │
+        │ - num_data_points (1)                       │
+        │ - samples (N channels x int16)              │
+        ├─────────────────────────────────────────────┤
+        │ PACKET 2:                                   │
+        │ - reserved                                  │
+        │ - timestamp (e.g., 1066)                    │
+        │ - num_data_points (1)                       │
+        │ - samples (N channels x int16)              │
+        ├─────────────────────────────────────────────┤
+        │ ...thousands more packets...                │
+        │ PACKET 500:                                 │
+        │ - timestamp (e.g., 50000)                   │  ← BIG GAP!
+        │ ...                                         │
+        └─────────────────────────────────────────────┘
 
-            # Jump to the next data block, the data is encoded as int16
-            data_block_size_bytes = num_data_points * channel_count * np.dtype("int16").itemsize
-            current_offset_bytes = offset_to_data_block_start + data_block_size_bytes
+        Key characteristics:
+        - NO separate headers and data - they're INTERLEAVED
+        - EVERY sample has its own timestamp (per-sample nanosecond precision)
+        - File is ONE CONTINUOUS ARRAY of uniform packets
 
-            data_block_index += 1
+        V2.1 FORMAT
+        -----------
+        Simplest format:
+        - Single continuous data block
+        - No timestamps in data section
+        - No multiple blocks (no pause/resume support)
 
-        return data_header
+        Parameters
+        ----------
+        spec : str
+            File specification version ("2.1", "2.2", "2.3", "3.0", "3.0-ptp")
+        nsx_nb : int
+            NSX file number (e.g., 5 for ns5 file)
 
-    def _read_nsx_dataheader_spec_v30_ptp(
-        self,
-        nsx_nb,
-        filesize=None,
-        offset=None,
-    ):
-        """
-        Reads the nsx data header for each data block for file spec 3.0 with PTP timestamps
-        """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
-
-        filesize = self._get_file_size(filename)
-
-        data_header = {}
-        if offset is None:
-            # This is read as an uint32 numpy scalar from the header so we transform it to python int
-            header_size = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
-        else:
-            header_size = offset
-
-        ptp_dt = [
-            ("reserved", "uint8"),
-            ("timestamps", "uint64"),
-            ("num_data_points", "uint32"),
-            ("samples", "int16", (self._nsx_basic_header[nsx_nb]["channel_count"],)),
-        ]
-        npackets = int((filesize - header_size) / np.dtype(ptp_dt).itemsize)
-        struct_arr = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=header_size, mode="r")
-
-        if not np.all(struct_arr["num_data_points"] == 1):
-            # some packets have more than 1 sample. Not actually ptp. Revert to non-ptp variant.
-            return self._read_nsx_dataheader_spec_v22_30(nsx_nb, filesize=filesize, offset=header_size)
-
-        # Segment data, at the moment, we segment, where the data has gaps that are longer
-        # than twice the sampling period.
-        sampling_rate = self._nsx_sampling_frequency[nsx_nb]
-        segmentation_threshold = 2.0 / sampling_rate
-
-        # The raw timestamps are the indices of an ideal clock that ticks at `timestamp_resolution` times per second.
-        # We convert this indices to actual timestamps in seconds
-        raw_timestamps = struct_arr["timestamps"]
-        timestamps_sampling_rate = self._nsx_basic_header[nsx_nb][
-            "timestamp_resolution"
-        ]  # clocks per sec uint64 or uint32
-        timestamps_in_seconds = raw_timestamps / timestamps_sampling_rate
-
-        time_differences = np.diff(timestamps_in_seconds)
-        gap_indices = np.argwhere(time_differences > segmentation_threshold).flatten()
-        segment_starts = np.hstack((0, 1 + gap_indices))
-
-        # Report gaps if any are found
-        if len(gap_indices) > 0:
-            import warnings
-
-            threshold_ms = segmentation_threshold * 1000
-
-            # Calculate all gap details in vectorized operations
-            gap_durations_seconds = time_differences[gap_indices]
-            gap_durations_ms = gap_durations_seconds * 1000
-            gap_positions_seconds = timestamps_in_seconds[gap_indices] - timestamps_in_seconds[0]
-
-            # Build gap detail lines all at once
-            gap_detail_lines = [
-                f"| {index:>15,} | {pos:>21.6f} | {dur:>21.3f} |\n"
-                for index, pos, dur in zip(gap_indices, gap_positions_seconds, gap_durations_ms)
+        Returns
+        -------
+        list[dict]
+            List of parsed data block headers, one per block in the file:
+            [
+                {
+                    "timestamp": scalar or None,
+                        - Standard format: scalar (one timestamp per block)
+                        - v2.1 format: None (no timestamps)
+                    "memmap_kwargs": dict,
+                        Recipe for on-demand mmap creation (offset, num_samples, dtype, etc.)
+                    "ptp_timestamps_memmap_kwargs": dict (PTP only),
+                        Strided access recipe for per-sample PTP timestamps
+                },
+                ...
             ]
 
-            segmentation_report_message = (
-                f"\nFound {len(gap_indices)} gaps for nsx {nsx_nb} where samples are farther apart than {threshold_ms:.3f} ms.\n"
-                f"Data will be segmented at these locations to create {len(segment_starts)} segments.\n\n"
-                "Gap Details:\n"
-                "+-----------------+-----------------------+-----------------------+\n"
-                "| Sample Index    | Sample at             | Gap Jump              |\n"
-                "|                 | (Seconds)             | (Milliseconds)        |\n"
-                "+-----------------+-----------------------+-----------------------+\n"
-                + "".join(gap_detail_lines)
-                + "+-----------------+-----------------------+-----------------------+\n"
-            )
-            warnings.warn(segmentation_report_message)
-
-        # Calculate all segment boundaries and derived values in one operation
-        segment_boundaries = list(segment_starts) + [len(struct_arr) - 1]
-        segment_num_data_points = [
-            segment_boundaries[i + 1] - segment_boundaries[i] for i in range(len(segment_starts))
-        ]
-
-        size_of_data_block = struct_arr.dtype.itemsize
-        segment_offsets = [header_size + pos * size_of_data_block for pos in segment_starts]
-
-        num_segments = len(segment_starts)
-        for segment_index in range(num_segments):
-            seg_offset = segment_offsets[segment_index]
-            num_data_pts = segment_num_data_points[segment_index]
-            seg_struct_arr = np.memmap(filename, dtype=ptp_dt, shape=num_data_pts, offset=seg_offset, mode="r")
-            data_header[segment_index] = {
-                "header": None,
-                "timestamp": seg_struct_arr["timestamps"],  # Note, this is an array, not a scalar
-                "nb_data_points": num_data_pts,
-                "offset_to_data_block": seg_offset,
-            }
-        return data_header
-
-    def _read_nsx_data_spec_v21(self, nsx_nb):
+        Notes
+        -----
+        - No memmaps are stored; only lightweight metadata for on-demand creation
+        - Returned data is NOT YET SEGMENTED (segmentation happens in a separate step)
+        - For standard format, each block from the file is one list entry
+        - For PTP format, all data is in a single entry
         """
-        Extract nsx data from a 2.1 .nsx file
+        if spec == "2.1":
+            return self._parse_nsx_data_v21(nsx_nb)
+        elif spec == "3.0-ptp":
+            return self._parse_nsx_data_v30_ptp(nsx_nb)
+        else:  # 2.2, 2.3, 3.0 standard
+            return self._parse_nsx_data_v22_v30(spec, nsx_nb)
+
+    def _parse_nsx_data_v21(self, nsx_nb):
+        """
+        Parse v2.1 NSX data blocks.
+
+        V2.1 format is the simplest:
+        - Single continuous data block
+        - No timestamps
+        - No pause/resume support
+
+        Returns
+        -------
+        list[dict]
+            Single-element list: [{"timestamp": None, "memmap_kwargs": dict}]
         """
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
-        # get shape of data
-        shape = (
-            int(self._nsx_params["2.1"](nsx_nb)["nb_data_points"]),
-            int(self._nsx_basic_header[nsx_nb]["channel_count"]),
+        # Calculate header size and data points for v2.1
+        channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
+        bytes_in_headers = (
+            self._nsx_basic_header[nsx_nb].dtype.itemsize + self._nsx_ext_header[nsx_nb].dtype.itemsize * channels
         )
-        offset = int(self._nsx_params["2.1"](nsx_nb)["bytes_in_headers"])
+        filesize = self._get_file_size(filename)
+        num_samples = (filesize - bytes_in_headers) // (2 * channels)
 
-        # read nsx data
-        # store as dict for compatibility with higher file specs
-        data = {0: np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r")}
-
-        return data
-
-    def _read_nsx_data_spec_v22_30(self, nsx_nb):
-        """
-        Extract nsx data (blocks) from a 2.2, 2.3, or 3.0 .nsx file.
-        Blocks can arise if the recording was paused by the user.
-        """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-
-        data = {}
-        data_header = self._nsx_data_header[nsx_nb]
-        number_of_channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
-
-        for data_block in data_header.keys():
-            # get shape and offset of data
-            number_of_samples = int(data_header[data_block]["nb_data_points"])
-            shape = (number_of_samples, number_of_channels)
-            offset = int(data_header[data_block]["offset_to_data_block"])
-
-            # read data
-            data[data_block] = np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r")
-
-        return data
-
-    def _read_nsx_data_spec_v30_ptp(self, nsx_nb):
-        """
-        Extract nsx data (blocks) from a 3.0 .nsx file with PTP timestamps
-        yielding a timestamp per sample. Blocks can arise
-        if the recording was paused by the user.
-        """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-
-        ptp_dt = [
-            ("reserved", "uint8"),
-            ("timestamps", "uint64"),
-            ("num_data_points", "uint32"),
-            ("samples", "int16", (self._nsx_basic_header[nsx_nb]["channel_count"],)),
+        return [
+            {
+                "timestamp": None,
+                "memmap_kwargs": {
+                    "filename": filename,
+                    "dtype": "int16",
+                    "offset": bytes_in_headers,
+                    "num_samples": num_samples,
+                },
+            }
         ]
 
-        data = {}
-        for bl_id, bl_header in self._nsx_data_header[nsx_nb].items():
-            struct_arr = np.memmap(
-                filename,
-                dtype=ptp_dt,
-                shape=bl_header["nb_data_points"],
-                offset=bl_header["offset_to_data_block"],
-                mode="r",
+    def _parse_nsx_data_v22_v30(self, spec, nsx_nb):
+        """
+        Parse standard format NSX data blocks (v2.2, 2.3, 3.0).
+
+        Standard format has:
+        - Explicit block headers in file
+        - Each block has scalar timestamp
+        - Multiple blocks when recording paused/resumed
+
+        Returns
+        -------
+        list[dict]
+            [{"timestamp": scalar, "memmap_kwargs": dict}, ...]
+        """
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+
+        # Get file parameters
+        filesize = self._get_file_size(filename)
+        channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
+        current_offset = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
+
+        parsed_data_headers = []
+
+        # Loop through file, reading block headers
+        while current_offset < filesize:
+            # Read header at current position
+            header = self._read_nsx_dataheader(spec, nsx_nb, current_offset)
+
+            if header["header_flag"] != 1:
+                raise ValueError(
+                    f"Invalid NSX data block header at offset {current_offset:#x} "
+                    f"in ns{nsx_nb} file. Expected header_flag=1, got {header['header_flag']}."
+                )
+
+            num_samples = int(header["nb_data_points"])
+            data_offset = current_offset + header.dtype.itemsize
+            timestamp = header["timestamp"]
+
+            parsed_data_headers.append(
+                {
+                    "timestamp": timestamp,
+                    "memmap_kwargs": {
+                        "filename": filename,
+                        "dtype": "int16",
+                        "offset": data_offset,
+                        "num_samples": num_samples,
+                    },
+                }
             )
-            # Does this concretize the data?
-            # If yes then investigate np.ndarray with buffer=file,
-            # offset=offset+13, and strides that skips 13-bytes per row.
-            data[bl_id] = struct_arr["samples"]
 
-        return data
+            # Jump to next block
+            data_size_bytes = num_samples * channels * 2  # int16 = 2 bytes
+            current_offset = data_offset + data_size_bytes
 
-    def _read_nev_header(self, spec, filename):
+        return parsed_data_headers
+
+    def _parse_nsx_data_v30_ptp(self, nsx_nb):
+        """
+        Parse PTP format NSX data (v3.0 with Precision Time Protocol).
+
+        PTP format has:
+        - Interleaved structure (timestamp + sample per packet)
+        - Array of timestamps (one per sample)
+        - Continuous data (segmentation inferred from timestamp gaps)
+
+        Returns
+        -------
+        list[dict]
+            Single-element list: [{"timestamp": None, "memmap_kwargs": dict,
+                                    "ptp_timestamps_memmap_kwargs": dict}]
+        """
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+
+        # Get file parameters
+        filesize = self._get_file_size(filename)
+        header_size = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
+        channel_count = int(self._nsx_basic_header[nsx_nb]["channel_count"])
+
+        ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channel_count)
+        ptp_dtype = np.dtype(ptp_dt)
+        npackets = int((filesize - header_size) / ptp_dtype.itemsize)
+
+        # Verify this is truly PTP: the first packet should carry exactly one sample.
+        # PTP files are homogeneous (every packet holds a single sample), so the first
+        # packet is diagnostic for the whole file and we avoid mapping all of it.
+        fid = self._get_nsx_file_handle(nsx_nb)
+        fid.seek(header_size)
+        first_packet = np.frombuffer(fid.read(ptp_dtype.itemsize), dtype=ptp_dtype, count=1)[0]
+        if first_packet["num_data_points"] != 1:
+            # Not actually PTP! Fall back to standard format
+            return self._parse_nsx_data_v22_v30("3.0", nsx_nb)
+
+        # Compute strided access parameters from the structured dtype
+        packet_size = ptp_dtype.itemsize
+        samples_item_offset = ptp_dtype.fields["samples"][1]
+        timestamps_item_offset = ptp_dtype.fields["timestamps"][1]
+
+        return [
+            {
+                "timestamp": None,
+                "memmap_kwargs": {
+                    "filename": filename,
+                    "dtype": "int16",
+                    "offset": header_size,
+                    "num_samples": npackets,
+                    "num_channels": channel_count,
+                    "packet_size": packet_size,
+                    "item_offset": samples_item_offset,
+                },
+                "ptp_timestamps_memmap_kwargs": {
+                    "filename": filename,
+                    "dtype": "uint64",
+                    "offset": header_size,
+                    "num_samples": npackets,
+                    "packet_size": packet_size,
+                    "item_offset": timestamps_item_offset,
+                },
+            }
+        ]
+
+    def _format_gap_report(
+        self, gap_sample_indices, gap_positions_seconds, gap_durations_ms, stream_label, detection_threshold_ms
+    ):
+        """
+        Format a detailed gap report showing where timestamp discontinuities occur.
+
+        Every quantity is passed in already resolved, so this makes no assumption about
+        how a format stores its timing and stays usable across readers (see #1773).
+
+        Parameters
+        ----------
+        gap_sample_indices : np.ndarray
+            Index of the last sample before each gap.
+        gap_positions_seconds : np.ndarray
+            Time of that sample, in seconds since the start of the recording.
+        gap_durations_ms : np.ndarray
+            Length of each gap in milliseconds.
+        stream_label : str
+            Name of the stream the gaps were found in, e.g. "ns2".
+        detection_threshold_ms : float
+            Threshold used to detect the gaps, in milliseconds.
+
+        Returns
+        -------
+        str
+            Formatted gap report with table
+        """
+        # Build gap detail table
+        gap_detail_lines = [
+            f"| {index:>15,} | {pos:>21.6f} | {dur:>21.3f} |\n"
+            for index, pos, dur in zip(gap_sample_indices, gap_positions_seconds, gap_durations_ms)
+        ]
+
+        return (
+            f"Gap Report for {stream_label}:\n"
+            f"Found {len(gap_sample_indices)} timestamp gaps "
+            f"(detection threshold: {detection_threshold_ms:.6g} ms)\n\n"
+            "Gap Details:\n"
+            "+-----------------+-----------------------+-----------------------+\n"
+            "| Sample Index    | Sample at (Seconds)   | Gap Size (ms)         |\n"
+            "+-----------------+-----------------------+-----------------------+\n"
+            + "".join(gap_detail_lines)
+            + "+-----------------+-----------------------+-----------------------+\n"
+        )
+
+    def _segment_nsx_data(self, parsed_data_headers, nsx_nb):
+        """
+        Segment NSX data based on timestamp gaps.
+
+        Takes the parsed data headers returned by _parse_nsx_data() and dispatches to
+        the segmenter for the file's format. Dispatch keys off the structure of the
+        headers rather than the declared spec, because _parse_nsx_data_v30_ptp() falls
+        back to standard parsing for files that declare PTP but do not use it.
+
+        Parameters
+        ----------
+        parsed_data_headers : list[dict]
+            List from _parse_nsx_data():
+            [{"timestamp": scalar/None, "memmap_kwargs": dict, ...}, ...]
+        nsx_nb : int
+            NSX file number
+
+        Returns
+        -------
+        list[dict]
+            [
+                {
+                    "timestamp": scalar or None,
+                    "block_timestamps": list (standard format only),
+                    "nb_data_points": int,
+                    "header": int or None,
+                    "offset_to_data_block": None (deprecated but kept for compatibility),
+                    "memmap_specs": list[dict], one per data block in the segment,
+                    "timestamps_memmap_kwargs": dict (PTP only),
+                },
+                ...
+            ]
+        """
+        first_header = parsed_data_headers[0]
+
+        if "ptp_timestamps_memmap_kwargs" in first_header:
+            return self._segment_nsx_ptp(parsed_data_headers, nsx_nb)
+        elif first_header["timestamp"] is None:
+            return self._segment_nsx_v21(parsed_data_headers)
+        else:
+            return self._segment_nsx_v22_v30(parsed_data_headers, nsx_nb)
+
+    def _detect_timestamp_gaps(self, time_differences, sampling_rate):
+        """
+        Find the forward gaps between consecutive samples.
+
+        Shared by the standard and PTP segmenters, which both pass the interval between
+        consecutive samples, one sampling period when the data is contiguous.
+
+        Forward gaps are detected at 2 sampling periods, above the jitter and rounding
+        noise floor of these files. This only finds them: raising when gap_tolerance_ms
+        is unset and keeping the gaps above the tolerance are left to the caller, so a
+        segmenter can drop gaps it knows are harmless first. Backward steps are not gaps
+        and are also left to the caller: the standard segmenter splits at them, and the
+        PTP segmenter leaves them inside the segment.
+
+        Parameters
+        ----------
+        time_differences : np.ndarray
+            Intervals in seconds between the timestamps of consecutive samples.
+        sampling_rate : float
+            Sampling rate in Hz.
+
+        Returns
+        -------
+        np.ndarray
+            Indices into time_differences of the gaps; a gap at index i falls between
+            samples i and i + 1.
+        """
+        return np.flatnonzero(time_differences > self._gap_detection_periods / sampling_rate)
+
+    def _segment_nsx_v21(self, parsed_data_headers):
+        """
+        Segment v2.1 data.
+
+        The format has a single continuous block and no timestamps, so there is nothing
+        to detect gaps in and the result is always one segment.
+        """
+        block_info = parsed_data_headers[0]
+        return [
+            {
+                "timestamp": block_info["timestamp"],
+                "nb_data_points": block_info["memmap_kwargs"]["num_samples"],
+                "header": None,
+                "offset_to_data_block": None,
+                "memmap_specs": [block_info["memmap_kwargs"]],
+            }
+        ]
+
+    def _segment_nsx_v22_v30(self, parsed_data_headers, nsx_nb):
+        """
+        Segment standard format data (v2.2, v2.3, v3.0) using block-level gap detection.
+
+        The file starts a new block at every pause, so block boundaries are the
+        candidate segment boundaries. Blocks separated by less than gap_tolerance_ms
+        merge into one segment, which keeps one memmap spec per block because they sit
+        at different offsets in the file.
+        """
+        ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
+        sampling_rate = self._nsx_sampling_frequency[nsx_nb]
+
+        # Empty blocks hold no samples and can carry a placeholder timestamp, so they would show up
+        # as gaps and backward jumps. They only ever became empty segments that are deleted later.
+        parsed_data_headers = [header for header in parsed_data_headers if header["memmap_kwargs"]["num_samples"] > 0]
+        if len(parsed_data_headers) == 0:
+            return []
+
+        block_t_starts = np.array([float(header["timestamp"]) / ts_res for header in parsed_data_headers])
+        block_sizes = np.array([header["memmap_kwargs"]["num_samples"] for header in parsed_data_headers])
+
+        if len(parsed_data_headers) > 1:
+            # Interval between a block's last sample and the next block's first, so
+            # contiguous blocks give exactly one sampling period
+            block_last_sample_times = block_t_starts + (block_sizes - 1) / sampling_rate
+            inter_block_intervals = block_t_starts[1:] - block_last_sample_times[:-1]
+
+            # Describe each boundary by the sample before it, as the PTP path does.
+            # Derived from the block scalars rather than built per sample.
+            last_sample_indices = np.cumsum(block_sizes)[:-1] - 1
+            last_sample_positions = block_last_sample_times[:-1] - block_t_starts[0]
+
+            # A block that starts before the previous one ends means the clock was reset. It has
+            # no duration to compare against gap_tolerance_ms, so it always starts a new segment
+            backward_indices = np.flatnonzero(inter_block_intervals < 0)
+            if len(backward_indices) > 0:
+                locations = ", ".join(
+                    f"sample {last_sample_indices[index]:,} at {last_sample_positions[index]:.6f} s "
+                    f"(back {-inter_block_intervals[index] * 1000:.3f} ms)"
+                    for index in backward_indices
+                )
+                warnings.warn(
+                    f"Detected {len(backward_indices)} backward timestamp jump(s) in ns{nsx_nb}: {locations}. "
+                    f"The clock ran backwards, which a recording reset causes. Each one starts a new segment; "
+                    f"gap_tolerance_ms does not apply to them because a backward jump has no gap duration."
+                )
+
+            gap_indices = self._detect_timestamp_gaps(inter_block_intervals, sampling_rate)
+            if self.gap_tolerance_ms is None:
+                # Until neo 0.16 the default keeps one segment per block, as before gap_tolerance_ms
+                message = (
+                    f"ns{nsx_nb} has {len(parsed_data_headers)} data blocks, as the recording starts a new one at "
+                    f"every pause. Each block is a segment, as before, but from neo 0.16 a gap between blocks will "
+                    f"raise an error instead. Pass gap_tolerance_ms to choose: 0 splits at every gap and a larger "
+                    f"value merges gaps up to that length into one segment."
+                )
+                # The gaps that will raise, so the tolerance can be chosen from their sizes
+                if len(gap_indices) > 0:
+                    gap_report = self._format_gap_report(
+                        gap_sample_indices=last_sample_indices[gap_indices],
+                        gap_positions_seconds=last_sample_positions[gap_indices],
+                        gap_durations_ms=inter_block_intervals[gap_indices] * 1000,
+                        stream_label=f"ns{nsx_nb}",
+                        detection_threshold_ms=1000.0 * self._gap_detection_periods / sampling_rate,
+                    )
+                    message = f"{message}\n{gap_report}"
+                # A clock reset still splits from neo 0.16, so a file whose only block boundaries are resets
+                # keeps its segments and is not warned. This waits on what neo does with resets, see #1937
+                if len(backward_indices) < len(parsed_data_headers) - 1:
+                    warnings.warn(message, FutureWarning)
+                boundary_indices = np.arange(len(parsed_data_headers) - 1, dtype=np.intp)
+            else:
+                # Keep the gaps above the tolerance (no warning - user opted in)
+                forward_indices = gap_indices[inter_block_intervals[gap_indices] > self.gap_tolerance_ms / 1000.0]
+                boundary_indices = np.union1d(backward_indices, forward_indices).astype(np.intp)
+        else:
+            boundary_indices = np.array([], dtype=np.intp)
+
+        # Runs of blocks between boundaries become one segment each
+        segment_starts = np.hstack((0, boundary_indices + 1)).astype(np.intp)
+        segment_stops = np.hstack((boundary_indices + 1, len(parsed_data_headers))).astype(np.intp)
+
+        segments = []
+        for start, stop in zip(segment_starts, segment_stops):
+            block_infos = parsed_data_headers[start:stop]
+            segments.append(
+                {
+                    "timestamp": block_infos[0]["timestamp"],
+                    "block_timestamps": [block["timestamp"] for block in block_infos],
+                    "nb_data_points": int(sum(block["memmap_kwargs"]["num_samples"] for block in block_infos)),
+                    "header": 1,  # Standard format has headers
+                    "offset_to_data_block": None,  # Not needed
+                    "memmap_specs": [block["memmap_kwargs"] for block in block_infos],
+                }
+            )
+
+        return segments
+
+    def _segment_nsx_ptp(self, parsed_data_headers, nsx_nb):
+        """
+        Segment PTP format data (v3.0) using sample-level gap detection.
+
+        Every sample carries its own timestamp, so gaps are detected between samples and
+        each resulting segment is a slice of the single block the file stores.
+        """
+        block_info = parsed_data_headers[0]
+        ts_kw = block_info["ptp_timestamps_memmap_kwargs"]
+        samples_kw = block_info["memmap_kwargs"]
+
+        sampling_rate = self._nsx_sampling_frequency[nsx_nb]
+        ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
+
+        # Read timestamps via strided mmap view for gap detection
+        fid = self._get_nsx_file_handle(nsx_nb)
+        timestamps = self._create_mmap_view(
+            fid=fid,
+            dtype=ts_kw["dtype"],
+            offset=ts_kw["offset"],
+            num_samples=ts_kw["num_samples"],
+            packet_size=ts_kw.get("packet_size"),
+            item_offset=ts_kw.get("item_offset", 0),
+        )
+        # Differences in clock ticks, so no float copy of every timestamp is made. A backward step
+        # wraps around in uint64, and viewing the result as int64 gives it back its sign
+        time_differences = np.diff(timestamps).view(np.int64) / ts_res
+
+        gap_indices = self._detect_timestamp_gaps(time_differences, sampling_rate)
+        if self.gap_tolerance_ms is None:
+            # Error by default on gaps - the caller must choose
+            if len(gap_indices) > 0:
+                # Every sample carries its own timestamp, so the gaps in the report are read off the
+                # timestamps at their indices
+                gap_positions_seconds = (timestamps[gap_indices].astype(np.int64) - np.int64(timestamps[0])) / ts_res
+                gap_report = self._format_gap_report(
+                    gap_sample_indices=gap_indices,
+                    gap_positions_seconds=gap_positions_seconds,
+                    gap_durations_ms=time_differences[gap_indices] * 1000,
+                    stream_label=f"ns{nsx_nb}",
+                    detection_threshold_ms=1000.0 * self._gap_detection_periods / sampling_rate,
+                )
+                raise ValueError(
+                    f"Detected {len(gap_indices)} timestamp gaps in ns{nsx_nb} file.\n"
+                    f"{gap_report}\n"
+                    f"To load this data, provide gap_tolerance_ms parameter to automatically "
+                    f"segment at gaps larger than the specified tolerance."
+                )
+            boundary_indices = gap_indices
+        else:
+            # Keep the gaps above the tolerance (no warning - user opted in)
+            boundary_indices = gap_indices[time_differences[gap_indices] > self.gap_tolerance_ms / 1000.0]
+        del timestamps, time_differences  # release the mmap view and the per-sample differences
+
+        num_total_samples = ts_kw["num_samples"]
+        segment_starts = np.hstack((0, boundary_indices + 1)).astype(np.intp)
+        segment_stops = np.hstack((boundary_indices + 1, num_total_samples)).astype(np.intp)
+
+        packet_size = samples_kw["packet_size"]
+        base_samples_offset = samples_kw["offset"]
+        base_ts_offset = ts_kw["offset"]
+
+        segments = []
+        for start, stop in zip(segment_starts, segment_stops):
+            seg_num_samples = int(stop - start)
+
+            # Compute new file offset for this segment slice
+            seg_samples_offset = base_samples_offset + int(start) * packet_size
+            seg_ts_offset = base_ts_offset + int(start) * packet_size
+
+            segments.append(
+                {
+                    "timestamp": None,  # PTP timestamps read on demand
+                    "nb_data_points": seg_num_samples,
+                    "header": None,  # PTP has no headers
+                    "offset_to_data_block": None,
+                    "memmap_specs": [
+                        {
+                            **samples_kw,
+                            "offset": seg_samples_offset,
+                            "num_samples": seg_num_samples,
+                        }
+                    ],
+                    "timestamps_memmap_kwargs": {
+                        **ts_kw,
+                        "offset": seg_ts_offset,
+                        "num_samples": seg_num_samples,
+                    },
+                }
+            )
+
+        return segments
+
+    def _build_nsx_v21_ext_header(self, nsx_nb):
+        """
+        Build extended header structure for v2.1 NSX files.
+
+        v2.1 NSX files don't have extended headers with analog/digital ranges.
+        We estimate these from the digitization factor in the NEV file.
+        dig_factor = max_analog_val / max_digital_val
+        We set max_digital_val = 1000, so max_analog_val = dig_factor
+        dig_factor is in nV, so units are uV.
+
+        Information from Kian Torab, Blackrock Microsystems.
+        """
+        ext_header = []
+
+        for i, elid in enumerate(self._nsx_ext_header[nsx_nb]["electrode_id"]):
+            # Get digitization factor from NEV
+            if self._avail_files["nev"]:
+                # Workaround for DigitalFactor overflow in buggy Cerebus systems
+                # Fix from NPMK toolbox (openNEV, line 464, git rev d0a25eac902704a3a29fa5dfd3aed0744f4733ed)
+                dig_factor = self._nev_params("digitization_factor")[elid]
+                if dig_factor == 21516:
+                    dig_factor = 152592.547
+                units = "uV"
+            else:
+                dig_factor = float("nan")
+                units = ""
+                if i == 0:  # Only warn once
+                    warnings.warn("Cannot rescale to voltage, raw data will be returned.", UserWarning)
+
+            # Generate label
+            if elid < 129:
+                label = f"chan{elid}"
+            else:
+                label = f"ainp{(elid - 129 + 1)}"
+
+            ext_header.append(
+                {
+                    "labels": label,
+                    "units": units,
+                    "min_analog_val": -float(dig_factor),
+                    "max_analog_val": float(dig_factor),
+                    "min_digital_val": -1000,
+                    "max_digital_val": 1000,
+                }
+            )
+
+        return ext_header
+
+    def _read_nev_header(self, spec):
         """
         Extract nev header information for any specification version.
 
@@ -1209,8 +1876,6 @@ class BlackrockRawIO(BaseRawIO):
         ----------
         spec : str
             The specification version (e.g., "2.1", "2.2", "2.3", "3.0")
-        filename : str
-            The NEV filename to read from
 
         Returns
         -------
@@ -1252,7 +1917,9 @@ class BlackrockRawIO(BaseRawIO):
             ("nb_ext_headers", "uint32"),
         ]
 
-        nev_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
+        fid = self._get_nev_file_handle()
+        fid.seek(0)
+        nev_basic_header = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
 
         shape = nev_basic_header["nb_ext_headers"]
         offset_dt0 = np.dtype(dt0).itemsize
@@ -1260,7 +1927,8 @@ class BlackrockRawIO(BaseRawIO):
         # This is the common structure of the beginning of extended headers
         dt1 = [("packet_id", "S8"), ("info_field", "S24")]
 
-        raw_ext_header = np.memmap(filename, offset=offset_dt0, dtype=dt1, shape=shape, mode="r")
+        fid.seek(offset_dt0)
+        raw_ext_header = np.frombuffer(fid.read(int(shape) * np.dtype(dt1).itemsize), dtype=dt1, count=int(shape))
 
         # Get extended header types for this spec
         header_types = NEV_EXT_HEADER_TYPES_BY_SPEC[spec]
@@ -1290,7 +1958,8 @@ class BlackrockRawIO(BaseRawIO):
             The NEV filename to read from
         """
         packet_size_bytes = self._nev_basic_header["bytes_in_data_packets"]
-        header_size = self._nev_basic_header["bytes_in_headers"]
+        # int(): a uint32 scalar overflows against file sizes > 4 GiB under NumPy 2 (NEP 50)
+        header_size = int(self._nev_basic_header["bytes_in_headers"])
 
         if self._nev_basic_header["ver_major"] >= 3:
             ts_format = "uint64"
@@ -1337,15 +2006,37 @@ class BlackrockRawIO(BaseRawIO):
 
         event_segment_ids = self._get_event_segment_ids(raw_data, masks, spec)
 
-        # Extract data for each packet type using view-then-mask pattern
-        # Strategy: reinterpret entire raw_data array with each packet type's structure, then filter
-        # All NEV data packets are fixed-width, so temporarily viewing "Spikes" data as "Comments"
-        # structure is safe - we immediately filter to keep only packets that actually match.
-        # This avoids creating copies of large data arrays during the parsing process.
+        # All NEV data packets are fixed-width, so raw_data is viewed with the structure of each
+        # packet type and the mask copies the packets of that type.
+        # Spike packets are most of the file, so for them only the fields used to select spikes are
+        # copied, with the position of each packet. _get_spike_raw_waveforms reads the waveforms
+        # from those positions.
+        self._nev_packet_count = n_packets
         data = {}
         for data_type in packet_identifiers:
             mask = masks[data_type]
-            data[data_type] = (raw_data.view(types[data_type])[mask], event_segment_ids[mask])
+            packets = raw_data.view(types[data_type])
+            if data_type == "Spikes":
+                positions = np.flatnonzero(mask)
+                position_dtype = "uint32" if n_packets <= 2**32 else "uint64"
+                spikes = np.empty(
+                    positions.size,
+                    dtype=np.dtype(
+                        [
+                            ("timestamp", ts_format),
+                            ("packet_id", "uint16"),
+                            ("unit_class_nb", "uint8"),
+                            ("position", position_dtype),
+                        ],
+                        align=True,
+                    ),
+                )
+                for field in ("timestamp", "packet_id", "unit_class_nb"):
+                    spikes[field] = packets[field][positions]
+                spikes["position"] = positions
+                data[data_type] = (spikes, event_segment_ids[mask])
+            else:
+                data[data_type] = (packets[mask], event_segment_ids[mask])
 
         return data
 
@@ -1379,30 +2070,42 @@ class BlackrockRawIO(BaseRawIO):
             # consistency check for monotone increasing time stamps
             # - Use logical comparator (instead of np.diff) to avoid unsigned dtype issues.
             # - Only consider handled/known event types.
-            mask_handled = np.any([mask for mask in masks.values()], axis=0)
-            jump_ids_handled = (
-                np.where(
-                    raw_event_data["timestamp"][mask_handled][1:] < raw_event_data["timestamp"][mask_handled][:-1]
-                )[0]
-                + 1
-            )
-            jump_ids = np.where(mask_handled)[0][jump_ids_handled]  # jump ids in full set of events (incl. unhandled)
-            overlap = np.isin(jump_ids, reset_ev_ids)
-            if not all(overlap):
+            # - Compare only packets of the same type: the file does not order packets of different
+            #   types (e.g. a comment is stamped when the user starts typing but written when they
+            #   finish, so it can be later than the spikes written after it).
+            # jumps maps the position of a packet earlier than the previous packet of its type to the
+            # position of that previous packet, in the full set of events (incl. unhandled).
+            jumps = {}
+            for mask in masks.values():
+                ids = np.flatnonzero(mask)
+                ts = raw_event_data["timestamp"][ids]
+                earlier = np.flatnonzero(ts[1:] < ts[:-1])
+                jumps.update(zip(ids[earlier + 1].tolist(), ids[earlier].tolist()))
+
+            # A reset sends the clock of every packet type back, so each type jumps at its first packet
+            # after it. Count a jump only if the packet it is compared with is in the current segment,
+            # so that one reset is one boundary.
+            reset_set = set(reset_ev_ids.tolist())
+            boundaries = []
+            segment_start = 0
+            for position in sorted(reset_set | jumps.keys()):
+                if position in reset_set or jumps[position] >= segment_start:
+                    boundaries.append(position)
+                    segment_start = position
+            additional_ids = np.array([b for b in boundaries if b not in reset_set])
+            if len(additional_ids):
                 # additional resets occurred without a reset event being stored
-                additional_ids = jump_ids[np.invert(overlap)]
                 warnings.warn(
                     f"Detected {len(additional_ids)} undocumented segments within "
                     f"nev data after timestamps {additional_ids}."
                     ""
                 )
-                reset_ev_ids = sorted(np.unique(np.concatenate((reset_ev_ids, jump_ids))))
 
             event_segment_ids = np.zeros(len(raw_event_data), dtype=int)
-            for reset_event_id in reset_ev_ids:
-                event_segment_ids[reset_event_id:] += 1
+            event_segment_ids[boundaries] = 1
+            event_segment_ids = np.cumsum(event_segment_ids)
 
-            self._nb_segment_nev = len(reset_ev_ids) + 1
+            self._nb_segment_nev = len(boundaries) + 1
             return event_segment_ids
 
         else:
@@ -1428,18 +2131,17 @@ class BlackrockRawIO(BaseRawIO):
             nsx_offset = self._nsx_data_header[nsx_nb][0]["timestamp"]
             # Multiples of 1/30.000s that pass between two nsX samples
             nsx_period = self._nsx_basic_header[nsx_nb]["period"]
-            # NSX segments needed as dict and list
-            nonempty_nsx_segments = {}
-            list_nonempty_nsx_segments = []
             # Counts how many segments CAN be created from nev
             nb_possible_nev_segments = self._nb_segment_nev
 
             # Nonempty segments are those containing at least 2 samples
             # These have to be able to be mapped to nev
-            for k, v in sorted(self._nsx_data_header[nsx_nb].items()):
-                if v["nb_data_points"] > 1:
-                    nonempty_nsx_segments[k] = v
-                    list_nonempty_nsx_segments.append(v)
+            nonempty_nsx_segment_indices = [
+                seg_index for seg_index, seg in enumerate(self._nsx_data_header[nsx_nb]) if seg["nb_data_points"] > 1
+            ]
+            nonempty_nsx_segments = [
+                self._nsx_data_header[nsx_nb][seg_index] for seg_index in nonempty_nsx_segment_indices
+            ]
 
             # Account for paused segments
             # This increases nev event segment ids if from the nsx an additional segment is found
@@ -1448,24 +2150,28 @@ class BlackrockRawIO(BaseRawIO):
             for k, (data, ev_ids) in self.nev_data.items():
 
                 # Check all nonempty nsX segments
-                for i, seg in enumerate(list_nonempty_nsx_segments[:]):
+                for nonempty_segment_index, seg in enumerate(nonempty_nsx_segments[:]):
 
-                    # Last timestamp in this nsX segment
+                    # Last timestamp in this nsX segment, which ends with its last block when
+                    # gap_tolerance_ms merged several blocks into it
                     # Not subtracting nsX offset from end because spike extraction might continue
                     end_of_current_nsx_seg = (
-                        seg["timestamp"] + seg["nb_data_points"] * self._nsx_basic_header[nsx_nb]["period"]
+                        seg["block_timestamps"][-1]
+                        + seg["memmap_specs"][-1]["num_samples"] * self._nsx_basic_header[nsx_nb]["period"]
                     )
 
-                    mask_after_seg = (ev_ids == i) & (data["timestamp"] > end_of_current_nsx_seg + nsx_period)
+                    mask_after_seg = (ev_ids == nonempty_segment_index) & (
+                        data["timestamp"] > end_of_current_nsx_seg + nsx_period
+                    )
 
                     # Show warning if spikes do not fit any segment (+- 1 sampling 'tick')
                     # Spike should belong to segment before
-                    mask_outside = (ev_ids == i) & (
+                    mask_outside = (ev_ids == nonempty_segment_index) & (
                         data["timestamp"] < int(seg["timestamp"]) - int(nsx_offset) - int(nsx_period)
                     )
 
                     if len(data[mask_outside]) > 0:
-                        warnings.warn(f"Spikes outside any segment. Detected on segment #{i}")
+                        warnings.warn(f"Spikes outside any segment. Detected on segment #{nonempty_segment_index}")
                         ev_ids[mask_outside] -= 1
 
                     # If some nev data are outside of this nsX segment, increase their segment ids
@@ -1476,10 +2182,9 @@ class BlackrockRawIO(BaseRawIO):
                     # because a new one has been discovered
                     if len(data[mask_after_seg]) > 0:
                         # Warning if spikes are after last segment
-                        if i == len(list_nonempty_nsx_segments) - 1:
-                            timestamp_resolution = self._nsx_params[self._nsx_spec[nsx_nb]](
-                                "timestamp_resolution", nsx_nb
-                            )
+                        if nonempty_segment_index == len(nonempty_nsx_segments) - 1:
+                            # Get timestamp resolution from header (available for v2.2+)
+                            timestamp_resolution = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]
                             time_after_seg = (
                                 data[mask_after_seg]["timestamp"][-1] - end_of_current_nsx_seg
                             ) / timestamp_resolution
@@ -1491,15 +2196,15 @@ class BlackrockRawIO(BaseRawIO):
                         # If reset and no segment detected in nev, then these segments cannot be
                         # distinguished in nev, which is a big problem
                         # XXX 96 is an arbitrary number based on observations in available files
-                        elif list_nonempty_nsx_segments[i + 1]["timestamp"] - nsx_offset <= 96:
+                        elif nonempty_nsx_segments[nonempty_segment_index + 1]["timestamp"] - nsx_offset <= 96:
                             # If not all definitely belong to the next segment,
                             # then it cannot be distinguished where some belong
-                            if len(data[ev_ids == i]) != len(data[mask_after_seg]):
+                            if len(data[ev_ids == nonempty_segment_index]) != len(data[mask_after_seg]):
                                 raise ValueError("Some segments in nsX cannot be detected in nev")
 
                         # Actual processing if no problem has occurred
                         nb_possible_nev_segments += 1
-                        ev_ids[ev_ids > i] += 1
+                        ev_ids[ev_ids > nonempty_segment_index] += 1
                         ev_ids[mask_after_seg] += 1
 
             # consistency check: same number of segments for nsx and nev data
@@ -1510,7 +2215,7 @@ class BlackrockRawIO(BaseRawIO):
                     f"ns{nsx_nb} file."
                 )
 
-            new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments), sorted(list(nonempty_nsx_segments))))
+            new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments), nonempty_nsx_segment_indices))
 
             # replacing event ids by matched event ids in place
             for k, (data, ev_ids) in self.nev_data.items():
@@ -1602,7 +2307,7 @@ class BlackrockRawIO(BaseRawIO):
         filename = ".".join([self._filenames["nev"], "nev"])
 
         dt = [("timestamp", "uint32")]
-        offset = self._get_file_size(filename) - self._nev_params("bytes_in_data_packets")
+        offset = self._get_file_size(filename) - int(self._nev_params("bytes_in_data_packets"))
         last_data_packet = np.memmap(filename, offset=offset, dtype=dt, mode="r")[0]
 
         n_starts = [0 * self._nev_params("event_unit")]
@@ -1696,96 +2401,6 @@ class BlackrockRawIO(BaseRawIO):
 
         return wf_left_sweep
 
-    def _get_nsx_param_spec_v21(self, nsx_nb):
-        """
-        Returns parameter (param_name) for a given nsx (nsx_nb) for file spec
-        2.1.
-        """
-        # Here, min/max_analog_val and min/max_digital_val are not available in
-        # the nsx, so that we must estimate these parameters from the
-        # digitization factor of the nev (information by Kian Torab, Blackrock
-        # Microsystems). Here dig_factor=max_analog_val/max_digital_val. We set
-        # max_digital_val to 1000, and max_analog_val=dig_factor. dig_factor is
-        # given in nV by definition, so the units turn out to be uV.
-        labels = []
-        dig_factor = []
-        for elid in self._nsx_ext_header[nsx_nb]["electrode_id"]:
-            if self._avail_files["nev"]:
-                # This is a workaround for the DigitalFactor overflow in NEV
-                # files recorded with buggy Cerebus system.
-                # Fix taken from: NMPK toolbox by Blackrock,
-                # file openNEV, line 464,
-                # git rev. d0a25eac902704a3a29fa5dfd3aed0744f4733ed
-                df = self._nev_params("digitization_factor")[elid]
-                if df == 21516:
-                    df = 152592.547
-                dig_factor.append(df)
-            else:
-                dig_factor.append(float("nan"))
-
-            if elid < 129:
-                labels.append(f"chan{elid}")
-            else:
-                labels.append(f"ainp{(elid - 129 + 1)}")
-
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
-
-        bytes_in_headers = (
-            self._nsx_basic_header[nsx_nb].dtype.itemsize
-            + self._nsx_ext_header[nsx_nb].dtype.itemsize * self._nsx_basic_header[nsx_nb]["channel_count"]
-        )
-
-        if np.isnan(dig_factor[0]):
-            units = ""
-            warnings.warn("Cannot rescale to voltage, raw data will be returned.", UserWarning)
-        else:
-            units = "uV"
-
-        nsx_parameters = {
-            "nb_data_points": int(
-                (int(self._get_file_size(filename)) - int(bytes_in_headers))
-                / int(2 * self._nsx_basic_header[nsx_nb]["channel_count"])
-                - 1
-            ),
-            "labels": labels,
-            "units": np.array([units] * self._nsx_basic_header[nsx_nb]["channel_count"]),
-            "min_analog_val": -1 * np.array(dig_factor, dtype="float"),
-            "max_analog_val": np.array(dig_factor, dtype="float"),
-            "min_digital_val": np.array([-1000] * self._nsx_basic_header[nsx_nb]["channel_count"]),
-            "max_digital_val": np.array([1000] * self._nsx_basic_header[nsx_nb]["channel_count"]),
-            "timestamp_resolution": 30000,
-            "bytes_in_headers": bytes_in_headers,
-            "sampling_rate": 30000 / self._nsx_basic_header[nsx_nb]["period"] * pq.Hz,
-            "time_unit": pq.CompoundUnit(f"1.0/{30000 / self._nsx_basic_header[nsx_nb]['period']}*s"),
-        }
-
-        # Returns complete dictionary because then it does not need to be called so often
-        return nsx_parameters
-
-    def _get_nsx_param_spec_v22_30(self, param_name, nsx_nb):
-        """
-        Returns parameter (param_name) for a given nsx (nsx_nb) for file spec
-        2.2 and 2.3.
-        """
-        nsx_parameters = {
-            "labels": self._nsx_ext_header[nsx_nb]["electrode_label"],
-            "units": self._nsx_ext_header[nsx_nb]["units"],
-            "min_analog_val": self._nsx_ext_header[nsx_nb]["min_analog_val"],
-            "max_analog_val": self._nsx_ext_header[nsx_nb]["max_analog_val"],
-            "min_digital_val": self._nsx_ext_header[nsx_nb]["min_digital_val"],
-            "max_digital_val": self._nsx_ext_header[nsx_nb]["max_digital_val"],
-            "timestamp_resolution": self._nsx_basic_header[nsx_nb]["timestamp_resolution"],
-            "bytes_in_headers": self._nsx_basic_header[nsx_nb]["bytes_in_headers"],
-            "sampling_rate": self._nsx_basic_header[nsx_nb]["timestamp_resolution"]
-            / self._nsx_basic_header[nsx_nb]["period"]
-            * pq.Hz,
-            "time_unit": pq.CompoundUnit(
-                f"1.0/{self._nsx_basic_header[nsx_nb]['timestamp_resolution'] / self._nsx_basic_header[nsx_nb]['period']}*s"
-            ),
-        }
-
-        return nsx_parameters[param_name]
-
     def _get_nonneural_evdicts_spec_v21_22(self, data):
         """
         Defines event types and the necessary parameters to extract them from
@@ -1845,36 +2460,25 @@ class BlackrockRawIO(BaseRawIO):
         segment in the nsX data.
         """
 
-        # Discard empty segments
-        removed_seg = []
-        for data_bl in range(self._nb_segment):
+        # Find empty segments (fewer than 2 samples across all nsx files)
+        empty_indices = []
+        for seg_index in range(self._nb_segment):
             keep_seg = True
             for nsx_nb in self.nsx_to_load:
-                length = self.nsx_datas[nsx_nb][data_bl].shape[0]
+                length = self._nsx_data_header[nsx_nb][seg_index]["nb_data_points"]
                 keep_seg = keep_seg and (length >= 2)
-
             if not keep_seg:
-                removed_seg.append(data_bl)
-                for nsx_nb in self.nsx_to_load:
-                    self.nsx_datas[nsx_nb].pop(data_bl)
-                    self._nsx_data_header[nsx_nb].pop(data_bl)
+                empty_indices.append(seg_index)
 
-        # Keys need to be increasing from 0 to maximum in steps of 1
-        # To ensure this after removing empty segments, some keys need to be re mapped
-        for i in removed_seg[::-1]:
-            for j in range(i + 1, self._nb_segment):
-                # remap nsx seg index
-                for nsx_nb in self.nsx_to_load:
-                    data = self.nsx_datas[nsx_nb].pop(j)
-                    self.nsx_datas[nsx_nb][j - 1] = data
+        # Remove empty segments in reverse order to preserve indices
+        for seg_index in reversed(empty_indices):
+            for nsx_nb in self.nsx_to_load:
+                del self._nsx_data_header[nsx_nb][seg_index]
 
-                    data_header = self._nsx_data_header[nsx_nb].pop(j)
-                    self._nsx_data_header[nsx_nb][j - 1] = data_header
-
-                # Also remap nev data, ev_ids are the equivalent to keys above
-                if self._avail_files["nev"]:
-                    for k, (data, ev_ids) in self.nev_data.items():
-                        ev_ids[ev_ids == j] -= 1
+            # Remap nev segment ids: shift down all ids above the removed segment
+            if self._avail_files["nev"]:
+                for _data, ev_ids in self.nev_data.values():
+                    ev_ids[ev_ids > seg_index] -= 1
 
             self._nb_segment -= 1
 
@@ -2172,6 +2776,12 @@ NEV_EXT_HEADER_TYPES_BY_SPEC = {
 # Used to create masks that filter raw data packets by their packet ID field.
 # Single values indicate equality check, tuples (min, max) indicate range check.
 # According to NEV spec: packet IDs < 32768 identify channels, IDs >= 32768 are system events.
+# Packets whose ID is not listed for a spec are not read. Known cases, ignored on purpose:
+# - 0x8000 + channel (e.g. 32769): preview packets of the live protocol (cbproto's "Preview Data Packet
+#   Definitions"), found in 3.0 files written by Central. They carry no neural data.
+# - 0xFFF9: recording events of 3.0 files written by Central (header type 0 start, 1 stop, 2 pause,
+#   3 resume; Central's CNevFile30::AddRecordingEvent). Not used to split segments, which come from
+#   resets and gaps.
 NEV_PACKET_IDENTIFIERS_BY_SPEC = {
     "2.1": {
         "NonNeural": 0,
@@ -2179,7 +2789,12 @@ NEV_PACKET_IDENTIFIERS_BY_SPEC = {
     },
     "2.2": {
         "NonNeural": 0,
-        "Spikes": (1, 255),  # Packet IDs in this range identify spike events on electrodes
+        # Packet IDs in this range identify spike events on electrodes. Wider than 2.1's range:
+        # Ripple Trellis writes 2.2 files with electrode IDs above 255 (its front-end ports are
+        # numbered 1-128, 129-256, 257-384...), and every spike on them was dropped without a
+        # warning (NeuralEnsemble/python-neo#1918). The bound is 5120 because Trellis writes
+        # stimulation packets on 5120 plus the electrode ID.
+        "Spikes": (1, 5120),
     },
     "2.3": {
         "NonNeural": 0,
@@ -2359,4 +2974,152 @@ NEV_PACKET_DATA_TYPES_BY_SPEC = {
             ("config_changed", f"S{packet_size_bytes - 12}"),
         ],
     },
+}
+
+
+# Basic header types for different NSX file specifications
+NSX_BASIC_HEADER_TYPES = {
+    "2.1": [
+        ("file_id", "S8"),
+        ("label", "S16"),
+        ("period", "uint32"),
+        ("channel_count", "uint32"),
+    ],
+    "2.2": [
+        ("file_id", "S8"),
+        ("ver_major", "uint8"),
+        ("ver_minor", "uint8"),
+        ("bytes_in_headers", "uint32"),
+        ("label", "S16"),
+        ("comment", "S256"),
+        ("period", "uint32"),
+        ("timestamp_resolution", "uint32"),
+        ("year", "uint16"),
+        ("month", "uint16"),
+        ("weekday", "uint16"),
+        ("day", "uint16"),
+        ("hour", "uint16"),
+        ("minute", "uint16"),
+        ("second", "uint16"),
+        ("millisecond", "uint16"),
+        ("channel_count", "uint32"),
+    ],
+    "2.3": [
+        ("file_id", "S8"),
+        ("ver_major", "uint8"),
+        ("ver_minor", "uint8"),
+        ("bytes_in_headers", "uint32"),
+        ("label", "S16"),
+        ("comment", "S256"),
+        ("period", "uint32"),
+        ("timestamp_resolution", "uint32"),
+        ("year", "uint16"),
+        ("month", "uint16"),
+        ("weekday", "uint16"),
+        ("day", "uint16"),
+        ("hour", "uint16"),
+        ("minute", "uint16"),
+        ("second", "uint16"),
+        ("millisecond", "uint16"),
+        ("channel_count", "uint32"),
+    ],
+    "3.0": [
+        ("file_id", "S8"),
+        ("ver_major", "uint8"),
+        ("ver_minor", "uint8"),
+        ("bytes_in_headers", "uint32"),
+        ("label", "S16"),
+        ("comment", "S256"),
+        ("period", "uint32"),
+        ("timestamp_resolution", "uint32"),
+        ("year", "uint16"),
+        ("month", "uint16"),
+        ("weekday", "uint16"),
+        ("day", "uint16"),
+        ("hour", "uint16"),
+        ("minute", "uint16"),
+        ("second", "uint16"),
+        ("millisecond", "uint16"),
+        ("channel_count", "uint32"),
+    ],
+}
+
+
+# Extended header types for different NSX file specifications
+NSX_EXT_HEADER_TYPES = {
+    "2.1": [
+        ("electrode_id", "uint32"),
+    ],
+    "2.2": [
+        ("type", "S2"),
+        ("electrode_id", "uint16"),
+        ("electrode_label", "S16"),
+        ("physical_connector", "uint8"),
+        ("connector_pin", "uint8"),
+        ("min_digital_val", "int16"),
+        ("max_digital_val", "int16"),
+        ("min_analog_val", "int16"),
+        ("max_analog_val", "int16"),
+        ("units", "S16"),
+        ("hi_freq_corner", "uint32"),
+        ("hi_freq_order", "uint32"),
+        ("hi_freq_type", "uint16"),
+        ("lo_freq_corner", "uint32"),
+        ("lo_freq_order", "uint32"),
+        ("lo_freq_type", "uint16"),
+    ],
+    "2.3": [
+        ("type", "S2"),
+        ("electrode_id", "uint16"),
+        ("electrode_label", "S16"),
+        ("physical_connector", "uint8"),
+        ("connector_pin", "uint8"),
+        ("min_digital_val", "int16"),
+        ("max_digital_val", "int16"),
+        ("min_analog_val", "int16"),
+        ("max_analog_val", "int16"),
+        ("units", "S16"),
+        ("hi_freq_corner", "uint32"),
+        ("hi_freq_order", "uint32"),
+        ("hi_freq_type", "uint16"),
+        ("lo_freq_corner", "uint32"),
+        ("lo_freq_order", "uint32"),
+        ("lo_freq_type", "uint16"),
+    ],
+    "3.0": [
+        ("type", "S2"),
+        ("electrode_id", "uint16"),
+        ("electrode_label", "S16"),
+        ("physical_connector", "uint8"),
+        ("connector_pin", "uint8"),
+        ("min_digital_val", "int16"),
+        ("max_digital_val", "int16"),
+        ("min_analog_val", "int16"),
+        ("max_analog_val", "int16"),
+        ("units", "S16"),
+        ("hi_freq_corner", "uint32"),
+        ("hi_freq_order", "uint32"),
+        ("hi_freq_type", "uint16"),
+        ("lo_freq_corner", "uint32"),
+        ("lo_freq_order", "uint32"),
+        ("lo_freq_type", "uint16"),
+    ],
+}
+
+# NSX Data Header Types by specification version
+# These define the structure of data block headers within NSX files
+NSX_DATA_HEADER_TYPES = {
+    # Version 2.1 has no data headers - data is stored continuously after the main header
+    "2.1": None,
+    # Versions 2.2+ use data block headers with timestamp size based on major version
+    "2.2": [("header_flag", "uint8"), ("timestamp", "uint32"), ("nb_data_points", "uint32")],
+    "2.3": [("header_flag", "uint8"), ("timestamp", "uint32"), ("nb_data_points", "uint32")],
+    "3.0": [("header_flag", "uint8"), ("timestamp", "uint64"), ("nb_data_points", "uint32")],
+    # PTP variant has a completely different structure with samples embedded
+    "3.0-ptp": lambda channel_count: [
+        ("reserved", "uint8"),
+        ("timestamps", "uint64"),
+        ("num_data_points", "uint32"),
+        ("samples", "int16", (channel_count,)),
+    ],
 }

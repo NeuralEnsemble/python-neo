@@ -2,7 +2,6 @@ import unittest
 from neo.rawio.nixrawio import NIXRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
-
 testfname = ""
 
 

@@ -19,7 +19,6 @@ behaviours specific to this IO, can be found on the wiki of the G-Node fork of
 Neo: https://github.com/G-Node/python-neo/wiki
 """
 
-
 from datetime import date, time, datetime
 from collections.abc import Iterable
 from collections import OrderedDict
@@ -48,7 +47,6 @@ from ..core import (
 )
 from ..io.proxyobjects import BaseProxy
 from .. import __version__ as neover
-
 
 datetime_types = (date, time, datetime)
 

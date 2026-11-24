@@ -19,7 +19,6 @@ from .baserawio import (
 )
 from ..io.nixio import check_nix_version
 
-
 # When reading metadata properties, the following keys are ignored since they
 # are used to store Neo object properties.
 # This dictionary is used in the _filter_properties() method.

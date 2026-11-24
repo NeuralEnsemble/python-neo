@@ -1,11 +1,11 @@
 [project]
 name = "neo"
-version = "0.15.0.dev0"
+version = "0.15.0dev"
 authors = [{name = "Neo authors and contributors"}]
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 readme = "README.rst"
-requires-python = ">=3.9"
-license = {text = "BSD 3-Clause License"}
+requires-python = ">=3.11"
+license = "BSD-3-Clause"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
@@ -13,19 +13,17 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Natural Language :: English",
     "Topic :: Scientific/Engineering",
-    "License :: OSI Approved :: BSD License",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
 ]
 
 dependencies = [
     "packaging",
-    "numpy>=1.24.4",
-    "quantities>=0.16.1"
+    "numpy>=2.0",
+    "quantities>=0.16.4"
 ]
 
 [project.urls]
@@ -55,6 +53,9 @@ test = [
     "h5py",
     "igor2",
     "klusta",
+    # klusta imports pkg_resources at module load; pkg_resources was moved
+    # out of setuptools>=81. Pin until klusta is removed or vendored.
+    "setuptools<81",
     "tqdm",
     "nixio",
     "matplotlib",
@@ -63,7 +64,7 @@ test = [
     "coverage",
     "coveralls",
     "pillow",
-    "sonpy;python_version<'3.10'",
+    "sonpy; platform_system=='Windows' or python_version>='3.14'",
     "pynwb",
     "probeinterface",
     "zugbruecke>=0.2",
@@ -131,6 +132,12 @@ all = [
 ]
 # we do not include 'stfio' in 'all' as it is not pip installable
 
+
+[tool.setuptools.packages.find]
+include = ["neo*"]
+
+[tool.setuptools.package-data]
+neo = ["resources/*.json"]
 
 [tool.black]
 line-length = 120

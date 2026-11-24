@@ -21,36 +21,21 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
     ]
 
     def test_sync(self):
-        with self.assertWarns(DeprecationWarning):
-            rawio_with_sync = OpenEphysBinaryRawIO(
-                self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"), load_sync_channel=True
-            )
-            rawio_with_sync.parse_header()
-        stream_name = [s_name for s_name in rawio_with_sync.header["signal_streams"]["name"] if "AP" in s_name][0]
-        stream_index = list(rawio_with_sync.header["signal_streams"]["name"]).index(stream_name)
+        # The sync trace is always split off into its own -SYNC stream; the parent
+        # AP stream has 384 channels (384 neural, SYNC excluded).
+        rawio = OpenEphysBinaryRawIO(self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"))
+        rawio.parse_header()
+        stream_name = [s_name for s_name in rawio.header["signal_streams"]["name"] if "AP" in s_name][0]
+        stream_index = list(rawio.header["signal_streams"]["name"]).index(stream_name)
 
-        # AP stream has 385 channels
-        chunk = rawio_with_sync.get_analogsignal_chunk(
-            block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
-        )
-        assert chunk.shape[1] == 385
-
-        rawio_no_sync = OpenEphysBinaryRawIO(
-            self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"), load_sync_channel=False
-        )
-        rawio_no_sync.parse_header()
-
-        # AP stream has 384 channels
-        chunk = rawio_no_sync.get_analogsignal_chunk(
+        chunk = rawio.get_analogsignal_chunk(
             block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
         )
         assert chunk.shape[1] == 384
 
     def test_sync_channel_access(self):
-        """Test that sync channels can be accessed as separate streams when load_sync_channel=False."""
-        rawio = OpenEphysBinaryRawIO(
-            self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"), load_sync_channel=False
-        )
+        """Sync channels are exposed as their own streams."""
+        rawio = OpenEphysBinaryRawIO(self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"))
         rawio.parse_header()
 
         # Find sync channel streams
@@ -68,28 +53,14 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         # Sync channel should have only one channel
         assert chunk.shape[1] == 1, f"Expected sync channel to have 1 channel, got {chunk.shape[1]}"
 
-    def test_no_sync(self):
-        # requesting sync channel when there is none raises an error
-        with self.assertRaises(ValueError):
-            with self.assertWarns(DeprecationWarning):
-                rawio_no_sync = OpenEphysBinaryRawIO(
-                    self.get_local_path("openephysbinary/v0.6.x_neuropixels_multiexp_multistream"),
-                    load_sync_channel=True,
-                )
-                rawio_no_sync.parse_header()
-
     def test_missing_folders(self):
-        # missing folders should raise an error
+        # missing folders should raise a warning
         with self.assertWarns(UserWarning):
-            rawio = OpenEphysBinaryRawIO(
-                self.get_local_path("openephysbinary/v0.6.x_neuropixels_missing_folders"), load_sync_channel=False
-            )
+            rawio = OpenEphysBinaryRawIO(self.get_local_path("openephysbinary/v0.6.x_neuropixels_missing_folders"))
             rawio.parse_header()
 
     def test_multiple_ttl_events_parsing(self):
-        rawio = OpenEphysBinaryRawIO(
-            self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"), load_sync_channel=False
-        )
+        rawio = OpenEphysBinaryRawIO(self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"))
         rawio.parse_header()
         rawio.header = rawio.header
         # Testing co
@@ -106,9 +77,7 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         assert np.allclose(ttl_events["durations"][ttl_events["labels"] == "7"], 0.016666, atol=0.001)
 
     def test_separating_stream_for_non_neural_data(self):
-        rawio = OpenEphysBinaryRawIO(
-            self.get_local_path("openephysbinary/neural_and_non_neural_data_mixed"), load_sync_channel=False
-        )
+        rawio = OpenEphysBinaryRawIO(self.get_local_path("openephysbinary/neural_and_non_neural_data_mixed"))
         rawio.parse_header()
         # Check that the non-neural data stream is correctly separated
         assert len(rawio.header["signal_streams"]["name"]) == 2

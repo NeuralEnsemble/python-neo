@@ -19,7 +19,6 @@ from neo.core.baseneo import BaseNeo
 from neo.core import AnalogSignal, Epoch, Event, SpikeTrain
 from neo.core.dataobject import ArrayDict
 
-
 logger = logging.getLogger("Neo")
 
 

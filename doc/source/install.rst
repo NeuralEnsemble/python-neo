@@ -28,7 +28,6 @@ Neo will still install but the IO module that uses them will fail on loading:
    * klusta for KwikIO
    * igor2 >= 0.5.2 for IgorIO
    * nixio >= 1.5 for NixIO
-   * stfio for StimfitIO
    * pillow for TiffIO
 
 These dependencies can be installed by specifying a comma-separated list with the
@@ -46,7 +45,6 @@ The following IO modules have additional dependencies:
    * kwikio
    * neomatlabio
    * nixio
-   * stimfitio
    * tiffio
 
 

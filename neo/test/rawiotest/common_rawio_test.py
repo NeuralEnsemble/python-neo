@@ -61,6 +61,7 @@ class BaseTestRawIO:
 
     entities_to_test = []  # list of files to test compliances
     entities_to_download = []  # when files are at gin
+    rawio_kwargs = {}  # extra kwargs passed to rawioclass constructor
 
     # allow environment to tell avoid using network
     use_network = can_use_network()
@@ -101,9 +102,9 @@ class BaseTestRawIO:
             local_path = self.get_local_path(entity_name)
 
             if self.rawioclass.rawmode.endswith("-file"):
-                reader = self.rawioclass(filename=local_path)
+                reader = self.rawioclass(filename=local_path, **self.rawio_kwargs)
             elif self.rawioclass.rawmode.endswith("-dir"):
-                reader = self.rawioclass(dirname=local_path)
+                reader = self.rawioclass(dirname=local_path, **self.rawio_kwargs)
 
             txt = reader.__repr__()
             assert "nb_block" not in txt, "Before parser_header() nb_block should be NOT known"

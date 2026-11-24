@@ -1,17 +1,10 @@
 import unittest
-from platform import system
-from sys import maxsize
 
 try:
-    if system() == "Windows":
-        if maxsize > 2**32:
-            import sonpy.amd64.sonpy
-        else:
-            import sonpy.win32.sonpy
-    elif system() == "Darwin":
-        import sonpy.darwin.sonpy
-    elif system() == "Linux":
-        import sonpy.linux.sonpy
+    from neo.rawio.cedrawio import _get_sonpy_namespace
+
+    # Raises ImportError if sonpy is missing or exposes no usable namespace.
+    _get_sonpy_namespace()
     from neo.io import CedIO
 except ImportError:
     HAVE_SONPY = False

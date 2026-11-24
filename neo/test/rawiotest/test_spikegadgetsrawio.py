@@ -17,6 +17,8 @@ class TestSpikeGadgetsRawIO(
         "spikegadgets/20210225_em8_minirec2_ac.rec",
         "spikegadgets/W122_06_09_2019_1_fromSD.rec",
         "spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec",
+        "spikegadgets/neuropixels2_4shank/20260122_134412_merged_cropped_1min_NP2.rec",
+        "spikegadgets/msh_1024ch/msh_1024ch.rec",
     ]
 
     def test_parse_header_missing_channels(self):
@@ -52,6 +54,33 @@ class TestSpikeGadgetsRawIO(
             ]
             # fmt: on
         )
+
+    def test_neuropixels_uses_hwchan_ids(self):
+        # Regression test for Neuropixels channel id and name semantics.
+        # ids are f"hwChan{i}" and names are f"probe{spikeSortingGroup}_chan{i}",
+        # where i is the channel index in the trodes stream (which equals the hwChan
+        # the firmware writes at that byte position, since the SpikeGadgets MCU emits
+        # Neuropixels samples in hwChan ascending order).
+        file_path = Path(self.get_local_path("spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec"))
+        reader = SpikeGadgetsRawIO(filename=file_path)
+        reader.parse_header()
+
+        trodes_mask = reader.header["signal_channels"]["stream_id"] == "trodes"
+        trodes_ids = list(reader.header["signal_channels"]["id"][trodes_mask])
+        trodes_names = list(reader.header["signal_channels"]["name"][trodes_mask])
+
+        self.assertEqual(trodes_ids[:4], ["hwChan0", "hwChan1", "hwChan2", "hwChan3"])
+        self.assertEqual(trodes_ids[-4:], ["hwChan764", "hwChan765", "hwChan766", "hwChan767"])
+        self.assertEqual(len(trodes_ids), 768)
+
+        # Names embed the SpikeChannel spikeSortingGroup attribute. The two-probe NP1
+        # workspace sets spikeSortingGroup=0 for one probe and =1 for the other; the
+        # boundary is interleaved across channel indices (not at i=384) because the
+        # two probes' hwChans interleave in chip blocks.
+        self.assertEqual(trodes_names[0], "probe0_chan0")
+        self.assertEqual(trodes_names[767], "probe1_chan767")
+        groups = {n.split("_")[0] for n in trodes_names}
+        self.assertEqual(groups, {"probe0", "probe1"})
 
     def test_opening_gibberish_file(self):
         """Test that parsing a file without </Configuration> raises ValueError instead of infinite loop."""

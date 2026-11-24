@@ -23,7 +23,6 @@ from .baserawio import (
 )
 from neo.core import NeoReadWriteError
 
-
 RECORD_SIZE = 1024
 HEADER_SIZE = 1024
 
