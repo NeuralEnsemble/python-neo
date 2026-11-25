@@ -64,7 +64,7 @@ test = [
     "coverage",
     "coveralls",
     "pillow",
-    "sonpy; platform_system=='Windows' or python_version>='3.14'",
+    "sonpy; (platform_system=='Windows' and platform_machine!='ARM64') or (python_version>='3.14' and platform_machine=='x86_64' and (platform_system=='Linux' or platform_system=='Darwin'))",
     "pynwb",
     "probeinterface",
     "zugbruecke>=0.2",
@@ -98,7 +98,8 @@ neomatlabio = ["scipy>=1.0.0"]
 nixio = ["nixio>=1.5.0"]
 tiffio = ["pillow"]
 edf = ["pyedflib"]
-ced = ["sonpy"]
+# sonpy binaries exist only for Windows x64, and from Python 3.14 for Linux and macOS on x86_64 (the macOS "universal2" wheel holds only x86_64 code); same marker as in `test`
+ced = ["sonpy; (platform_system=='Windows' and platform_machine!='ARM64') or (python_version>='3.14' and platform_machine=='x86_64' and (platform_system=='Linux' or platform_system=='Darwin'))"]
 nwb = ["pynwb"]
 maxwell = ["h5py"]
 biocam = ["h5py"]
@@ -124,7 +125,7 @@ all = [
     "pytest",
     "pytest-cov",
     "scipy>=1.0.0",
-    "sonpy",
+    "sonpy; (platform_system=='Windows' and platform_machine!='ARM64') or (python_version>='3.14' and platform_machine=='x86_64' and (platform_system=='Linux' or platform_system=='Darwin'))",
     "tqdm",
     "wenv; sys_platform!='win32'",
     "zugbruecke>=0.2; sys_platform!='win32'",
