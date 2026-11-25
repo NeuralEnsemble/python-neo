@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from pathlib import Path
 from numpy.testing import assert_array_equal, assert_
@@ -60,6 +61,21 @@ class TestTdtRawIO(
         assert_array_equal(
             io_single.get_analogsignal_chunk(0, 0, 0, 100, 0), io_multi.get_analogsignal_chunk(0, 0, 0, 100, 0)
         )
+
+
+class TestTdtRawIOBlockDirectory(unittest.TestCase):
+    def test_block_directory_is_single_block(self):
+        # a directory holding the files of one block (no sub-block folders), see issue 1970
+        with tempfile.TemporaryDirectory() as tmp:
+            block = Path(tmp) / "recording_name"
+            block.mkdir()
+            for ext in ("Tbk", "Tdx", "tev", "tsq"):
+                (block / f"recording_name.{ext}").touch()
+
+            rawio = TdtRawIO(block)
+
+            self.assertEqual(rawio.tdt_block_mode, "single")
+            self.assertEqual(rawio.dirname, block / "recording_name")
 
 
 if __name__ == "__main__":
