@@ -21,6 +21,21 @@ class TestPlexonRawIO(
         "plexon/plx/timestamp_clock/one_megahertz_forty_bit_timestamps/sorted_spikes_and_strobed_events.plx",
     ]
 
+    def test_chunk_stopping_at_the_end_of_the_last_block(self):
+        """Keep the final block when the right border is zero."""
+        reader = PlexonRawIO(filename=self.get_local_path("plexon/File_plexon_3.plx"), progress_bar=False)
+        reader.parse_header()
+        last = reader._data_blocks[5][0][-1]
+        samples = np.frombuffer(reader._memmap, dtype="int16", count=last["size"] // 2, offset=last["pos"])
+        # Use the parsed start to test trimming independently of the block-offset fix in #1980.
+        start = int(last["cumsum"])
+        stop = start + samples.size
+        for offset in (0, 10):
+            chunk = reader.get_analogsignal_chunk(i_start=start + offset, i_stop=stop)
+            np.testing.assert_array_equal(chunk[:, 0], samples[offset:])
+        chunk = reader.get_analogsignal_chunk(i_start=start, i_stop=stop - 1)
+        np.testing.assert_array_equal(chunk[:, 0], samples[:-1])
+
     def test_timestamps_with_lower_word_above_two_to_the_31(self):
         """The lower 32 bits of the 40-bit block timestamp must be read unsigned.
 

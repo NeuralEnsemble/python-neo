@@ -481,7 +481,9 @@ class PlexonRawIO(BaseRawIO):
                     # right border
                     # be careful that bl could be both bl0 and bl1!!
                     border = data.size - (i_stop - data_blocks[bl]["cumsum"])
-                    data = data[:-border]
+                    # Avoid an empty slice when the chunk ends at the block boundary.
+                    if border > 0:
+                        data = data[:-border]
                 if bl == bl0:
                     # left border
                     border = i_start - data_blocks[bl]["cumsum"]
