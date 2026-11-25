@@ -661,7 +661,9 @@ class IrregularlySampledSignal(BaseSignal):
         if other.units != self.units:
             other = other.rescale(self.units)
 
-        new_times = np.hstack((self.times, other.times))
+        time_units = self.times.units
+        other_times = other.times.rescale(time_units)
+        new_times = np.hstack((self.times.magnitude, other_times.magnitude)) * time_units
         sorting = np.argsort(new_times)
         new_samples = np.vstack((self.magnitude, other.magnitude))
 

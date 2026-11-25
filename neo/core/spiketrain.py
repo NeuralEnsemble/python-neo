@@ -22,7 +22,7 @@ import warnings
 
 import numpy as np
 import quantities as pq
-from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.baseneo import BaseNeo, MergeError, _merge_quantity_arrays, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
 
 # need this to avoid circular import issue
@@ -942,7 +942,7 @@ class SpikeTrain(DataObject):
             **kwargs,
         )
         if all(wfs):
-            wfs_stack = np.vstack([st.waveforms.rescale(self.waveforms.units) for st in all_spiketrains])
+            wfs_stack = np.vstack([st.waveforms.rescale(self.waveforms.units).magnitude for st in all_spiketrains])
             wfs_stack = wfs_stack[sorting] * self.waveforms.units
             train.waveforms = wfs_stack
         train.segment = self.segment
@@ -972,11 +972,11 @@ class SpikeTrain(DataObject):
         for key in keys:
             try:
                 self_ann = deepcopy(self.array_annotations[key])
-                other_ann = np.concatenate([deepcopy(other.array_annotations[key]) for other in others])
                 if isinstance(self_ann, pq.Quantity):
-                    other_ann.rescale(self_ann.units)
-                    arr_ann = np.concatenate([self_ann, other_ann]) * self_ann.units
+                    quantities = [self_ann] + [deepcopy(other.array_annotations[key]) for other in others]
+                    arr_ann = _merge_quantity_arrays(quantities, axis=0)
                 else:
+                    other_ann = np.concatenate([deepcopy(other.array_annotations[key]) for other in others])
                     arr_ann = np.concatenate([self_ann, other_ann])
                 merged_array_annotations[key] = arr_ann[sorting]
             # Annotation only available in 'self', must be skipped

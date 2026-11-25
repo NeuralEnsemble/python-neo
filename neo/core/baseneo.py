@@ -10,6 +10,7 @@ import logging
 from numbers import Number
 
 import numpy as np
+import quantities as pq
 
 ALLOWED_ANNOTATION_TYPES = (
     int,
@@ -33,6 +34,25 @@ logger = logging.getLogger("Neo")
 
 class MergeError(Exception):
     pass
+
+
+def _merge_quantity_arrays(quantities, axis=0):
+    """Merge compatible Quantity arrays while preserving uncertainty metadata."""
+    reference_units = quantities[0].units
+    normalized = [quantity.rescale(reference_units) for quantity in quantities]
+    magnitudes = np.concatenate([quantity.magnitude for quantity in normalized], axis=axis)
+
+    uncertain_quantities = [isinstance(quantity, pq.UncertainQuantity) for quantity in normalized]
+    if any(uncertain_quantities):
+        if not all(uncertain_quantities):
+            raise ValueError(
+                "Cannot merge Quantity and UncertainQuantity arrays without losing uncertainty information"
+            )
+        uncertainties = [quantity.uncertainty.rescale(reference_units).magnitude for quantity in normalized]
+        uncertainty = np.concatenate(uncertainties, axis=axis)
+        return pq.UncertainQuantity(magnitudes, units=reference_units, uncertainty=uncertainty)
+
+    return magnitudes * reference_units
 
 
 class NeoReadWriteError(IOError):
@@ -95,6 +115,8 @@ def merge_annotation(a, b):
         raise TypeError(f"type({a}) {type(a)} != type({b}) {type(b)}")
     if isinstance(a, dict):
         return merge_annotations(a, b)
+    elif isinstance(a, pq.Quantity):
+        return _merge_quantity_arrays([a, b], axis=None)
     elif isinstance(a, np.ndarray):  # concatenate b to a
         return np.append(a, b)
     elif isinstance(a, list):  # concatenate b to a

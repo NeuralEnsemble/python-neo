@@ -196,6 +196,28 @@ class TestSpikeTrainList(unittest.TestCase):
         self.assertEqual(len(a), 8)
         self.assertEqual(id(c), id(a))
 
+        first = SpikeTrainList.from_spike_time_array(
+            [1, 3],
+            [10, 10],
+            all_channel_ids=[10],
+            units=pq.s,
+            t_start=0 * pq.s,
+            t_stop=10 * pq.s,
+        )
+        second = SpikeTrainList.from_spike_time_array(
+            [500, 1500],
+            [11, 11],
+            all_channel_ids=[11],
+            units=pq.ms,
+            t_start=0 * pq.ms,
+            t_stop=10000 * pq.ms,
+        )
+        combined = first + second
+        channel_ids, spike_times = combined.multiplexed
+        assert_array_equal(channel_ids, [10, 10, 11, 11])
+        self.assertEqual(spike_times.units, pq.s)
+        assert_array_equal(spike_times.magnitude, [1, 3, 0.5, 1.5])
+
     def test_add_list_of_spiketrains(self):
         """Adding a list of SpikeTrains to a SpikeTrainList should return a new SpikeTrainList"""
         extended_stl = self.stl_from_array + [
@@ -205,6 +227,7 @@ class TestSpikeTrainList(unittest.TestCase):
         ]
         self.assertIsInstance(extended_stl, SpikeTrainList)
         self.assertEqual(len(extended_stl), 7)
+
         self.assertNotEqual(id(extended_stl), id(self.stl_from_array))
 
         extended_stl = self.stl_from_obj_list_incl_proxy + [
@@ -214,6 +237,20 @@ class TestSpikeTrainList(unittest.TestCase):
         ]
         self.assertIsInstance(extended_stl, SpikeTrainList)
         self.assertEqual(len(extended_stl), 7)
+
+    def test_multiplexed_rescales_object_backed_spiketrains(self):
+        trains = [
+            SpikeTrain([1, 3] * pq.s, t_start=0 * pq.s, t_stop=10 * pq.s, channel_id=10),
+            SpikeTrain([500, 1500] * pq.ms, t_start=0 * pq.ms, t_stop=10000 * pq.ms, channel_id=11),
+            SpikeTrain([1000000, 2500000] * pq.us, t_start=0 * pq.us, t_stop=10000000 * pq.us, channel_id=12),
+        ]
+        stl = SpikeTrainList(items=trains)
+
+        channel_ids, spike_times = stl.multiplexed
+
+        assert_array_equal(channel_ids, [10, 10, 11, 11, 12, 12])
+        self.assertEqual(spike_times.units, pq.s)
+        assert_array_equal(spike_times.magnitude, [1, 3, 0.5, 1.5, 1, 2.5])
 
     def test_iadd_list_of_spiketrains(self):
         """Adding a list of SpikeTrains to a SpikeTrainList in place
@@ -325,3 +362,8 @@ class TestSpikeTrainList(unittest.TestCase):
         assert type(channel_id_array) == np.ndarray
         assert_array_equal(channel_id_array, np.array([101, 101, 101, 101, 102, 102, 103, 103]))
         assert_array_equal(spike_time_array, np.array([0.5, 0.6, 23.6, 99.2, 0.7, 11.2, 1.1, 88.5]) * pq.ms)
+
+        channel_ids, spike_times = self.stl_from_obj_list.multiplexed
+        assert_array_equal(channel_ids, [101, 101, 101, 101, 102, 102, 103, 103])
+        self.assertEqual(spike_times.units, pq.ms)
+        assert_array_equal(spike_times.magnitude, [0.5, 0.6, 23.6, 99.2, 0.7, 11.2, 1.1, 88.5])

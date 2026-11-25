@@ -516,6 +516,9 @@ class TestEvent(unittest.TestCase):
             )
 
         assert_neo_object_is_compliant(evtres)
+        self.assertEqual(evtres.times.units, pq.ms)
+        np.testing.assert_allclose(evtres.times.magnitude, [1.1, 1.5, 1.7, 0.0021, 0.0025, 0.0027])
+        assert_array_equal(evtres.labels, evttarg.labels)
         assert_same_sub_schema(evttarg, evtres)
         # Remove this, when array_annotations are added to assert_same_sub_schema
         assert_arrays_equal(evtres.array_annotations["index"], np.array([10, 11, 12, 0, 1, 2]))

@@ -538,6 +538,9 @@ class BrainwareSrcIO(BaseIO):
             if not spiketrains:
                 return self._default_spiketrain.copy()
 
+            # Reader-created SpikeTrains are normalized to milliseconds by this method below.
+            # The source decoder returns raw millisecond values, so dropping Quantity metadata
+            # here and rebuilding the result in milliseconds preserves the file-format values.
             # get the times of the spiketrains and combine them
             waveforms = [itrain.waveforms for itrain in spiketrains]
             rawtrains = np.array(np.concatenate(spiketrains, axis=1))
