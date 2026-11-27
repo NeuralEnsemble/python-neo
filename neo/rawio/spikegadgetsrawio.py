@@ -436,6 +436,31 @@ class SpikeGadgetsRawIO(BaseRawIO):
         for ann in (bl_ann, seg_ann):
             ann.update(gconf.attrib)
 
+    def _get_spikegadgets_timestamps(self, i_start=None, i_stop=None):
+        """Return native acquisition ticks for the selected stored packets.
+
+        Each packet contains one uint32 sample tick shared by all signal streams.
+        The reader currently exposes one block and one segment. These ticks are
+        neither seconds nor the nominal times used by AnalogSignal: their initial
+        value, gaps, counter rollovers and resets are preserved without unwrapping.
+
+        Parameters
+        ----------
+        i_start : int | None, default: None
+            First stored packet index. None means the beginning of the recording.
+        i_stop : int | None, default: None
+            Exclusive stop packet index. None means the end of the recording.
+
+        Returns
+        -------
+        timestamps : np.ndarray
+            Read-only, one-dimensional view of the file's little-endian uint32
+            ticks, one per stored packet in the requested slice.
+        """
+        timestamp_bytes = self._raw_memmap[:, self._timestamp_byte : self._timestamp_byte + 4]
+        timestamps = timestamp_bytes.view("<u4").reshape(-1)
+        return timestamps[i_start:i_stop]
+
     def _segment_t_start(self, block_index, seg_index):
         return 0.0
 
