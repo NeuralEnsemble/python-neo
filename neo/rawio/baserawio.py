@@ -186,6 +186,18 @@ class BaseRawIO:
 
         self._has_buffer_description_api = False
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def close(self):
+        """
+        Release resources such as open file handles.
+        IO classes that hold resources override this method.
+        """
+
     def has_buffer_description_api(self) -> bool:
         """
         Return if the reader handle the buffer API.

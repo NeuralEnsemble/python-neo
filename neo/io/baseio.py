@@ -118,6 +118,18 @@ class BaseIO:
         if not corelogger.handlers and not rootlogger.handlers:
             corelogger.addHandler(logging_handler)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def close(self):
+        """
+        Release resources such as open file handles.
+        IO classes that hold resources override this method.
+        """
+
     ######## General read/write methods #######################
     def read(self, lazy: bool = False, **kargs):
         """
