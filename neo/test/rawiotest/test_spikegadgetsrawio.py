@@ -2,6 +2,8 @@ import unittest
 from pathlib import Path
 import tempfile
 
+import numpy as np
+
 from neo.rawio.spikegadgetsrawio import SpikeGadgetsRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 from numpy.testing import assert_array_equal
@@ -19,6 +21,7 @@ class TestSpikeGadgetsRawIO(
         "spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec",
         "spikegadgets/neuropixels2_4shank/20260122_134412_merged_cropped_1min_NP2.rec",
         "spikegadgets/msh_1024ch/msh_1024ch.rec",
+        "spikegadgets/SpikeGadgets_test_data_Pixie384_20261104_cropped.rec",
     ]
 
     def test_parse_header_missing_channels(self):
@@ -81,6 +84,56 @@ class TestSpikeGadgetsRawIO(
         self.assertEqual(trodes_names[767], "probe1_chan767")
         groups = {n.split("_")[0] for n in trodes_names}
         self.assertEqual(groups, {"probe0", "probe1"})
+
+    def test_nric_uses_hwchan_ids(self):
+        # NRIC (Pixie384 headstage, device="neuropixelsNRIC") recordings share the
+        # Neuropixels hwChan-ascending layout and therefore the same id/name
+        # semantics: ids are f"hwChan{i}" and names are f"probe{spikeSortingGroup}_chan{i}".
+        file_path = Path(self.get_local_path("spikegadgets/SpikeGadgets_test_data_Pixie384_20261104_cropped.rec"))
+        reader = SpikeGadgetsRawIO(filename=file_path)
+        reader.parse_header()
+
+        trodes_mask = reader.header["signal_channels"]["stream_id"] == "trodes"
+        trodes_ids = list(reader.header["signal_channels"]["id"][trodes_mask])
+        trodes_names = list(reader.header["signal_channels"]["name"][trodes_mask])
+
+        self.assertEqual(len(trodes_ids), 384)
+        self.assertEqual(trodes_ids[0], "hwChan0")
+        self.assertEqual(trodes_ids[-1], "hwChan383")
+        # all channels of this recording belong to a single spikeSortingGroup "0"
+        self.assertEqual(trodes_names[0], "probe0_chan0")
+        self.assertEqual(trodes_names[-1], "probe0_chan383")
+
+        # gain comes from the SpikeNTrode spikeScalingToUv attribute
+        trodes_gains = reader.header["signal_channels"]["gain"][trodes_mask]
+        trodes_units = reader.header["signal_channels"]["units"][trodes_mask]
+        self.assertEqual(set(trodes_units), {"uV"})
+        self.assertTrue(np.allclose(trodes_gains, 0.018311105685598315))
+
+    def test_nric_traces_match_trodes_export(self):
+        # Cross-check the decoded ephys region against Trodes' own export of the same
+        # recording (raw_group0.dat, Fields: <voltage 384*int16>): this pins the
+        # hwChan-ascending layout of the NRIC device to an independent decoder.
+        file_path = Path(self.get_local_path("spikegadgets/SpikeGadgets_test_data_Pixie384_20261104_cropped.rec"))
+        reader = SpikeGadgetsRawIO(filename=file_path)
+        reader.parse_header()
+
+        stream_index = list(reader.header["signal_streams"]["id"]).index("trodes")
+        n_samples = 1000
+        traces = reader.get_analogsignal_chunk(
+            block_index=0, seg_index=0, i_start=0, i_stop=n_samples, stream_index=stream_index
+        )
+        self.assertEqual(traces.dtype, np.dtype("int16"))
+        self.assertEqual(traces.shape, (n_samples, 384))
+
+        dat_path = file_path.with_name("SpikeGadgets_test_data_Pixie384_20261104_trodes_raw_cropped.dat")
+        with open(dat_path, "rb") as f:
+            head = f.read(65536)
+            end = head.find(b"<End settings>")
+            offset = head.find(b"\n", end) + 1
+        reference = np.memmap(dat_path, dtype="<i2", mode="r", offset=offset, shape=(n_samples, 384))
+
+        assert_array_equal(traces, reference)
 
     def test_opening_gibberish_file(self):
         """Test that parsing a file without </Configuration> raises ValueError instead of infinite loop."""
