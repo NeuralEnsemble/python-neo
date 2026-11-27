@@ -108,6 +108,7 @@ and may not be the current affiliation of a contributor.
 * Axel Coiffard-Donaty
 * Anthony Mercer
 * Aaron Kanzer [53]
+* Vladyslav Ivanov [54]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Université Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -162,7 +163,7 @@ and may not be the current affiliation of a contributor.
 51. Stony Brook University, Stony Brook, NY, USA
 52. University of Sussex, Brighton, UK
 53. Scigantic, USA
-
+54. German Primate Centre, Göttingen, Germany
 
 
 If we've somehow missed you off the list we're very sorry - please let us know.

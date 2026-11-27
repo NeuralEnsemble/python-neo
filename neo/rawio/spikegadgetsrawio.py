@@ -90,6 +90,15 @@ which is declared by SpikeConfiguration.device:
     coordinates) for each hwChan, but the column-to-byte-position mapping is
     the identity: column i reads byte pair i, with hwChan i's data.
 
+  * NRIC recordings (`device="neuropixelsNRIC"`, the amplifier chip of the SpikeGadgets
+    Pixie384 headstage): hwChan ascending order, identical to Neuropixels recordings;
+    the NRIC chip is the same amplifier generation as Neuropixels probes, so the reader
+    treats the two identically. Only `deviceSubType="10"` has been verified against
+    hardware so far. The HardwareConfiguration of NRIC files also declares a
+    `neuropixels_LFP` Device without Channel children: its numBytes contribute to the
+    packet size, but its rotating subsampled LFP samples (lfpSubsamplingInterval) are
+    not decoded and not exposed as a stream.
+
 Author: Samuel Garcia
 """
 
@@ -106,6 +115,12 @@ from .baserawio import (
     _event_channel_dtype,
 )
 from neo.core import NeoReadWriteError
+
+# SpikeConfiguration devices whose ephys region the MCU firmware emits in
+# hwChan-ascending byte order. The NRIC chip (SpikeGadgets Pixie384 headstage)
+# is the same amplifier generation as Neuropixels probes and shares this layout;
+# only deviceSubType "10" has been verified against hardware so far.
+_HWCHAN_ASCENDING_DEVICES = ("neuropixels1", "neuropixels2", "neuropixelsNRIC")
 
 
 class SpikeGadgetsRawIO(BaseRawIO):
@@ -137,6 +152,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
         This will not affect functions that do not rely on the data having physical units,
             e.g., _get_analogsignal_chunk, but functions such as rescale_signal_raw_to_float
             will be inaccurate.
+        The ephys channel layout depends on the headstage declared by
+        SpikeConfiguration.device: Intan chip-interleaved (``"intan"`` or absent),
+        Neuropixels 1.0/2.0 and NRIC (Pixie384) hwChan-ascending. See the module
+        docstring for the per-device byte layouts.
 
         Examples
         --------
@@ -330,14 +349,14 @@ class SpikeGadgetsRawIO(BaseRawIO):
             # declared in SpikeConfiguration.device.
             # - Intan recordings are chip-interleaved by the MCU (main control unit), so we
             #   reproduce that ordering from the chip layout.
-            # - Neuropixels recordings are emitted in hwChan ascending order: byte pair i
-            #   holds the sample from the electrode whose hwChan = i.
+            # - Neuropixels and NRIC recordings are emitted in hwChan ascending order:
+            #   byte pair i holds the sample from the electrode whose hwChan = i.
             spike_device = sconf.attrib.get("device")
             if spike_device in (None, "intan"):
                 hwchans_in_binary_order = self._intan_hwchans_in_binary_order(
                     sconf, num_ephy_channels, num_ephy_channels_xml
                 )
-            elif spike_device in ("neuropixels1", "neuropixels2"):
+            elif spike_device in _HWCHAN_ASCENDING_DEVICES:
                 xml_hwchans = {int(schan.attrib["hwChan"]) for trode in sconf for schan in trode}
                 expected = set(range(num_ephy_channels))
                 if xml_hwchans != expected:
@@ -368,7 +387,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     gain = 1.0
                     units = ""
 
-                if spike_device in ("neuropixels1", "neuropixels2"):
+                if spike_device in _HWCHAN_ASCENDING_DEVICES:
                     chan_id = f"hwChan{hw_chan}"
                     sorting_group = schan.attrib.get("spikeSortingGroup", "0")
                     name = f"probe{sorting_group}_chan{hw_chan}"
