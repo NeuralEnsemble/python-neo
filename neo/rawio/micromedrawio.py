@@ -68,7 +68,7 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
 
             # header version
             (header_version,) = f.read_f("b", offset=175)
-            if header_version != 4:
+            if header_version not in (4, 5):
                 raise NotImplementedError(f"`header_version {header_version} is not implemented in neo yet")
 
             # area
@@ -94,7 +94,8 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
             for zname in zone_names:
                 zname2, pos, length = f.read_f("8sII")
                 zones[zname] = zname2, pos, length
-                if zname != zname2.decode("ascii").strip(" "):
+                # zone names are padded with spaces in header version 4 and with NULs in version 5
+                if zname != zname2.decode("ascii").strip(" \x00"):
                     raise NeoReadWriteError("expected the zone name to match")
 
             # "TRONCA" zone define segments
@@ -115,6 +116,10 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
             if len(self.info_segments) == 0:
                 # one unique segment = general case
                 self.info_segments.append((0, 0))
+            elif self.info_segments[0][1] > 0:
+                # The table lists the segments after the first cut. When its first trace_offset is above 0 the
+                # samples before it are a segment of their own, where the recording clock and the file agree.
+                self.info_segments.insert(0, (0, 0))
 
             nb_segment = len(self.info_segments)
 
@@ -214,7 +219,7 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
                 dtype = np.dtype(ev_dtype)
                 rawevent = np.memmap(self.filename, dtype=dtype, mode="r", offset=pos, shape=length // dtype.itemsize)
 
-                # important : all events timing are related to the first segment t_start
+                # event positions are indices in the data block, like trace_offset (see _get_event_timestamps)
                 self._raw_events.append([])
                 for seg_index in range(nb_segment):
                     left_lim = seg_limits[seg_index]
@@ -274,18 +279,18 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         raw_event = self._raw_events[event_channel_index][seg_index]
 
-        # important : all events timing are related to the first segment t_start
-        seg_start0, _ = self.info_segments[0]
+        # An event start is an index in the data block, the coordinate of trace_offset, and the time axis of a segment
+        # starts at its seg_start: the sample at index s of segment k is at clock sample seg_start + s - trace_offset.
+        seg_start, trace_offset = self.info_segments[seg_index]
+        timestamp = raw_event["start"].astype("int64") + (seg_start - trace_offset)
 
         if t_start is not None:
-            keep = raw_event["start"] + seg_start0 >= int(t_start * self._sampling_rate)
-            raw_event = raw_event[keep]
+            keep = timestamp >= int(t_start * self._sampling_rate)
+            raw_event, timestamp = raw_event[keep], timestamp[keep]
 
         if t_stop is not None:
-            keep = raw_event["start"] + seg_start0 <= int(t_stop * self._sampling_rate)
-            raw_event = raw_event[keep]
-
-        timestamp = raw_event["start"] + seg_start0
+            keep = timestamp <= int(t_stop * self._sampling_rate)
+            raw_event, timestamp = raw_event[keep], timestamp[keep]
 
         if event_channel_index < 2:
             durations = None
